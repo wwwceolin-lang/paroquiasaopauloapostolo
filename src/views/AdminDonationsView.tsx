@@ -27,7 +27,7 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
   const [nomeReal, setNomeReal] = useState('');
   const [telefone, setTelefone] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [status, setStatus] = useState<'pago' | 'aberto'>('pago');
+  const [status, setStatus] = useState<'pago' | 'aberto'>('aberto');
 
   // Filtered donations
   const filteredDonations = donations.filter((d) => {
@@ -54,7 +54,7 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setNomeReal(donation.nome_real || '');
     setTelefone(donation.telefone || '');
     setDescricao(donation.descricao || '');
-    setStatus(donation.status || 'pago');
+    setStatus(donation.status || 'aberto');
   };
 
   const openNewModal = () => {
@@ -64,7 +64,7 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setNomeReal('');
     setTelefone('');
     setDescricao('');
-    setStatus('pago');
+    setStatus('aberto');
   };
 
   const closeModal = () => {
@@ -75,7 +75,7 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setNomeReal('');
     setTelefone('');
     setDescricao('');
-    setStatus('pago');
+    setStatus('aberto');
   };
 
   const handleSave = async (e: React.FormEvent) => {

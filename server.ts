@@ -245,7 +245,7 @@ app.post('/api/donations', async (req, res) => {
     nome_real: (req.body.nome_real || '').trim(),
     telefone: (req.body.telefone || '').trim(),
     descricao: (req.body.descricao || '').trim(),
-    status: req.body.status || 'pago',
+    status: req.body.status || 'aberto',
     created_at: req.body.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

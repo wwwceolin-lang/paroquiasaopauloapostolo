@@ -26,7 +26,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [nomeReal, setNomeReal] = useState('');
   const [telefone, setTelefone] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [status, setStatus] = useState<'pago' | 'aberto'>('pago');
+  const [status, setStatus] = useState<'pago' | 'aberto'>('aberto');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       setNomeReal('');
       setTelefone('');
       setDescricao('');
-      setStatus('pago');
+      setStatus('aberto');
 
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
