@@ -56,7 +56,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
   };
 
   return (
-    <div className="relative h-screen max-h-screen w-screen bg-slate-950 text-white p-2.5 sm:p-3 md:p-4 flex flex-col justify-between overflow-hidden select-none selection:bg-amber-500 selection:text-slate-950 box-border">
+    <div className="relative min-h-screen lg:h-screen lg:max-h-screen w-full bg-slate-950 text-white p-2.5 sm:p-4 flex flex-col justify-between overflow-y-auto lg:overflow-hidden select-none selection:bg-amber-500 selection:text-slate-950 box-border pb-6 lg:pb-3">
       
       {/* Background Decorative Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -86,19 +86,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
             <span>AO VIVO NO LEILÃO</span>
           </div>
-
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
-              soundEnabled
-                ? 'bg-amber-500/20 border-amber-400 text-amber-300 hover:bg-amber-500/30'
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-            }`}
-            title={soundEnabled ? 'Som ativado' : 'Som desativado'}
-          >
-            <span>{soundEnabled ? '🔊' : '🔇'}</span>
-            <span className="hidden md:inline">{soundEnabled ? 'Som' : 'Mudo'}</span>
-          </button>
 
           {/* Discreet Floating Icon Button for Navigation & Settings Menu */}
           <button
@@ -263,7 +250,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
       </div>
 
       {/* Footer Instructions */}
-      <footer className="relative z-10 w-full text-center text-[10px] sm:text-xs text-slate-500 flex-shrink-0 pt-1">
+      <footer className="relative z-10 w-full text-center text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider flex-shrink-0 pt-4 pb-2">
         Plataforma Leilão Solar • Telão Oficial em Tempo Real • {config.nome_igreja}
       </footer>
 
@@ -360,25 +347,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
               <div className="space-y-2 pt-2 border-t border-slate-800">
                 <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Ferramentas de Apresentação</div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div>
                   <button
                     onClick={toggleFullscreen}
-                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <span>⛶</span>
-                    <span>Tela Cheia</span>
-                  </button>
-
-                  <button
-                    onClick={() => setSoundEnabled(!soundEnabled)}
-                    className={`px-3 py-2 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
-                      soundEnabled
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300'
-                        : 'bg-slate-800 border-slate-700 text-slate-400'
-                    }`}
-                  >
-                    <span>{soundEnabled ? '🔊' : '🔇'}</span>
-                    <span>{soundEnabled ? 'Som Ativo' : 'Mudo'}</span>
+                    <span>Modo Tela Cheia (Apresentação)</span>
                   </button>
                 </div>
 
