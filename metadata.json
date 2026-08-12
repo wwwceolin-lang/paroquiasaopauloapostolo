@@ -1,0 +1,6 @@
+{
+  "name": "Painéis de Luz - Campanha Solar",
+  "description": "Plataforma em tempo real para leilão beneficente e acompanhamento visual da arrecadação para painéis solares na igreja.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

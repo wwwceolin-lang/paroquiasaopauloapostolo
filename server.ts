@@ -1,0 +1,331 @@
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { createServer as createViteServer } from 'vite';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+
+dotenv.config();
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json({ limit: '10mb' }));
+
+// Supabase client initialization on server side
+const rawSupabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+const rawSupabaseKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+function cleanUrl(url: string) {
+  if (!url) return '';
+  let c = url.trim().replace(/\/+$/, '');
+  c = c.replace(/\/(auth|rest)\/v\d+.*$/i, '').replace(/\/+$/, '');
+  return c;
+}
+
+const supabaseUrl = cleanUrl(rawSupabaseUrl);
+const supabaseKey = rawSupabaseKey;
+const isSupabaseConfigured = Boolean(
+  supabaseUrl &&
+  supabaseKey &&
+  !supabaseUrl.includes('your-supabase-project') &&
+  (supabaseUrl.startsWith('https://') || supabaseUrl.startsWith('http://'))
+);
+
+const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseKey) : null;
+
+// Database File Persistence Path
+const DATA_DIR = path.join(process.cwd(), 'data');
+const DB_FILE = path.join(DATA_DIR, 'database.json');
+
+// Default initial data
+const DEFAULT_CONFIG = {
+  id: 'default',
+  nome_campanha: 'Campanha Luz e Esperança',
+  nome_igreja: 'Igreja Matriz de São José',
+  meta_total: 100000,
+  quantidade_paineis: 40,
+  potencia_painel: 550,
+  economia_mensal_total: 2500,
+  valor_kwh: 0.95,
+  imagem_igreja: 'default-vector',
+  admin_emails: ['www.ceolin@gmail.com'],
+  painel_grid_cols: 10,
+  painel_grid_rows: 4,
+  painel_roof_top_percent: 28,
+  painel_roof_left_percent: 23,
+  painel_roof_width_percent: 54,
+  painel_roof_height_percent: 22,
+  painel_roof_perspective_tilt: 8,
+  updated_at: new Date().toISOString(),
+};
+
+interface ServerDB {
+  config: typeof DEFAULT_CONFIG;
+  donations: Array<{
+    id: string;
+    valor: number;
+    doador: string;
+    descricao?: string;
+    status: string;
+    created_at: string;
+    updated_at?: string;
+  }>;
+}
+
+function loadServerDB(): ServerDB {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (fs.existsSync(DB_FILE)) {
+      const content = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      return {
+        config: parsed.config ? { ...DEFAULT_CONFIG, ...parsed.config } : DEFAULT_CONFIG,
+        donations: Array.isArray(parsed.donations) ? parsed.donations : [],
+      };
+    }
+  } catch (err) {
+    console.error('Error reading database file:', err);
+  }
+  const initial = { config: DEFAULT_CONFIG, donations: [] };
+  saveServerDB(initial);
+  return initial;
+}
+
+function saveServerDB(db: ServerDB) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing database file:', err);
+  }
+}
+
+let db = loadServerDB();
+
+// Sync initial data from Supabase if configured
+async function syncFromSupabase() {
+  if (!supabase || !isSupabaseConfigured) return;
+  try {
+    const { data: configData } = await supabase.from('configuracoes').select('*').limit(1).maybeSingle();
+    if (configData) {
+      const sbTime = configData.updated_at ? new Date(configData.updated_at).getTime() : 0;
+      const localTime = db.config?.updated_at ? new Date(db.config.updated_at).getTime() : 0;
+      if (sbTime > localTime) {
+        db.config = { ...DEFAULT_CONFIG, ...configData };
+      }
+    }
+    const { data: donationsData } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
+    if (donationsData && donationsData.length > 0) {
+      db.donations = donationsData;
+    }
+    saveServerDB(db);
+  } catch (e) {
+    console.warn('Initial Supabase fetch warning:', e);
+  }
+}
+
+syncFromSupabase();
+
+// ================= API ROUTES =================
+
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    isSupabaseConfigured,
+    donationsCount: db.donations.length,
+    updated_at: db.config.updated_at,
+  });
+});
+
+app.get('/api/config', async (req, res) => {
+  if (supabase && isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase.from('configuracoes').select('*').limit(1).maybeSingle();
+      if (!error && data) {
+        const sbTime = data.updated_at ? new Date(data.updated_at).getTime() : 0;
+        const localTime = db.config?.updated_at ? new Date(db.config.updated_at).getTime() : 0;
+
+        // ONLY replace db.config if Supabase data has a strictly NEWER updated_at timestamp!
+        if (sbTime > localTime) {
+          db.config = { ...DEFAULT_CONFIG, ...data };
+          saveServerDB(db);
+        } else if (localTime > sbTime && data.id) {
+          // If server memory is newer, sync server memory back to Supabase
+          (async () => {
+            try {
+              await supabase.from('configuracoes').upsert([{ id: data.id, ...db.config }], { onConflict: 'id' });
+            } catch (e) {}
+          })();
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase config fetch error, using local file DB:', e);
+    }
+  }
+  res.json(db.config);
+});
+
+app.post('/api/config', async (req, res) => {
+  const newConfig = {
+    ...db.config,
+    ...req.body,
+    updated_at: new Date().toISOString(),
+  };
+  db.config = newConfig;
+  saveServerDB(db);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      const { data: existingRow } = await supabase.from('configuracoes').select('id').limit(1).maybeSingle();
+      const targetId = existingRow?.id || 'default';
+      await supabase.from('configuracoes').upsert([{ id: targetId, ...newConfig }], { onConflict: 'id' });
+    } catch (e) {
+      console.warn('Supabase config update warning:', e);
+    }
+  }
+
+  res.json(db.config);
+});
+
+app.get('/api/donations', async (req, res) => {
+  if (supabase && isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        db.donations = data;
+        saveServerDB(db);
+      }
+    } catch (e) {
+      console.warn('Supabase donations fetch error, using local file DB:', e);
+    }
+  }
+  res.json(db.donations);
+});
+
+app.post('/api/donations', async (req, res) => {
+  const donationPayload = {
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    valor: Number(req.body.valor) || 0,
+    doador: (req.body.doador || 'Doador Anônimo').trim(),
+    descricao: (req.body.descricao || '').trim(),
+    status: req.body.status || 'pago',
+    created_at: req.body.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  db.donations.unshift(donationPayload);
+  saveServerDB(db);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('doacoes')
+        .insert([{
+          valor: donationPayload.valor,
+          doador: donationPayload.doador,
+          descricao: donationPayload.descricao,
+          status: donationPayload.status,
+          created_at: donationPayload.created_at,
+        }])
+        .select()
+        .single();
+      if (!error && data) {
+        // replace temporary item with official Supabase inserted item
+        db.donations = db.donations.map((d) => (d.id === donationPayload.id ? data : d));
+        saveServerDB(db);
+        return res.json(data);
+      }
+    } catch (e) {
+      console.warn('Supabase donation insert error:', e);
+    }
+  }
+
+  res.json(donationPayload);
+});
+
+app.put('/api/donations/:id', async (req, res) => {
+  const { id } = req.params;
+  const index = db.donations.findIndex((d) => d.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Doação não encontrada' });
+  }
+
+  const updatedDonation = {
+    ...db.donations[index],
+    ...req.body,
+    updated_at: new Date().toISOString(),
+  };
+
+  db.donations[index] = updatedDonation;
+  saveServerDB(db);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      await supabase.from('doacoes').update({ ...req.body, updated_at: updatedDonation.updated_at }).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase donation update error:', e);
+    }
+  }
+
+  res.json(updatedDonation);
+});
+
+app.delete('/api/donations/:id', async (req, res) => {
+  const { id } = req.params;
+  db.donations = db.donations.filter((d) => d.id !== id);
+  saveServerDB(db);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      await supabase.from('doacoes').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase donation delete error:', e);
+    }
+  }
+
+  res.json({ success: true, id });
+});
+
+app.post('/api/donations/clear', async (req, res) => {
+  db.donations = [];
+  saveServerDB(db);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      await supabase.from('doacoes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (e) {
+      console.warn('Supabase donations clear error:', e);
+    }
+  }
+
+  res.json({ success: true, cleared: true });
+});
+
+// ================= VITE / STATIC MIDDLEWARE =================
+
+async function startServer() {
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando e sincronizando dados na porta ${PORT}`);
+  });
+}
+
+startServer();
