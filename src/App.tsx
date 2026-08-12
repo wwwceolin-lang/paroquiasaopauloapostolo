@@ -226,7 +226,7 @@ export default function App() {
   const isTelao = !currentPath.startsWith('/admin');
 
   return (
-    <div className={`min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col ${isTelao ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
+    <div className={`min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col ${isTelao ? 'lg:h-screen lg:max-h-screen lg:overflow-hidden' : ''}`}>
       <PwaInstallPrompt />
 
       {!isTelao && (
@@ -239,8 +239,7 @@ export default function App() {
         />
       )}
 
-      <main className={`flex-1 ${isTelao ? 'h-full min-h-0 overflow-hidden' : ''}`}>{renderView()}</main>
-
+      <main className={`flex-1 ${isTelao ? 'lg:h-full lg:min-h-0 lg:overflow-hidden overflow-y-auto' : ''}`}>{renderView()}</main>
       <SupabaseSetupModal
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}

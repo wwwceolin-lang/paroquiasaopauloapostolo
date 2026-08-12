@@ -20,10 +20,11 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
 
   // Roof positioning parameters from config (with defaults)
   const cols = config.painel_grid_cols || 10;
+  const rows = Math.ceil(totalPaineis / cols);
   const topPercent = config.painel_roof_top_percent ?? 28;
   const leftPercent = config.painel_roof_left_percent ?? 23;
   const widthPercent = config.painel_roof_width_percent ?? 54;
-  const heightPercent = config.painel_roof_height_percent ?? 22;
+  const heightPercent = config.painel_roof_height_percent ?? 28;
   const tiltDeg = config.painel_roof_perspective_tilt ?? 8;
 
   // Generate solar panel items array
@@ -202,10 +203,10 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
           >
             {/* Solar Panel Grid */}
             <div
-              className="w-full h-full grid gap-1 p-1.5 bg-slate-950/60 backdrop-blur-[2px] rounded-lg border border-amber-500/30 shadow-2xl overflow-hidden"
+              className="w-full h-full grid gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-slate-950/60 backdrop-blur-[2px] rounded-lg border border-amber-500/30 shadow-2xl overflow-hidden"
               style={{
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                gridAutoRows: '1fr',
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
               }}
             >
               <AnimatePresence>
@@ -224,7 +225,7 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
                       damping: 20,
                       delay: panel.isNew ? (panel.index % 10) * 0.08 : 0,
                     }}
-                    className={`relative w-full h-full min-h-[12px] rounded-[2px] overflow-hidden transition-all duration-300 ${
+                    className={`relative w-full h-full min-h-0 rounded-[2px] overflow-hidden transition-all duration-300 ${
                       panel.isUnlocked
                         ? 'bg-gradient-to-br from-blue-700 via-sky-800 to-indigo-950 border border-cyan-300/80 shadow-[0_0_8px_rgba(56,189,248,0.5)]'
                         : 'border border-dashed border-amber-400/30 bg-slate-900/40 hover:border-amber-400/50'
@@ -258,7 +259,7 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
 
                         {/* Panel Number Indicator */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <span className="text-[8px] sm:text-[10px] text-cyan-100 font-mono font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                          <span className="text-[7px] sm:text-[9px] md:text-[10px] text-cyan-100 font-mono font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] leading-none">
                             #{panel.index + 1}
                           </span>
                         </div>
@@ -267,8 +268,8 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
                       </div>
                     ) : (
                       /* Placeholder Dashed Outline */
-                      <div className="w-full h-full flex items-center justify-center opacity-70">
-                        <span className="text-[8px] sm:text-[11px] text-amber-200 font-mono font-bold">
+                      <div className="w-full h-full flex items-center justify-center opacity-80">
+                        <span className="text-[7px] sm:text-[9px] md:text-[10px] text-amber-200 font-mono font-bold leading-none">
                           #{panel.index + 1}
                         </span>
                       </div>

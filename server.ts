@@ -66,6 +66,8 @@ interface ServerDB {
     id: string;
     valor: number;
     doador: string;
+    nome_real?: string;
+    telefone?: string;
     descricao?: string;
     status: string;
     created_at: string;
@@ -195,9 +197,38 @@ app.get('/api/donations', async (req, res) => {
   if (supabase && isSupabaseConfigured) {
     try {
       const { data, error } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
-      if (!error && data) {
-        db.donations = data;
-        saveServerDB(db);
+      if (!error && Array.isArray(data)) {
+        if (data.length > 0) {
+          db.donations = data;
+          saveServerDB(db);
+        } else if (db.donations.length > 0) {
+          // Local DB has donations but Supabase returned empty array.
+          // Sync local items to Supabase in background without wiping local DB.
+          for (const d of db.donations) {
+            try {
+              let syncRes = await supabase.from('doacoes').insert([{
+                valor: d.valor,
+                doador: d.doador,
+                nome_real: d.nome_real || '',
+                telefone: d.telefone || '',
+                descricao: d.descricao || '',
+                status: d.status || 'pago',
+                created_at: d.created_at,
+              }]);
+              if (syncRes.error && syncRes.error.code === 'PGRST204') {
+                await supabase.from('doacoes').insert([{
+                  valor: d.valor,
+                  doador: d.doador,
+                  descricao: d.descricao || '',
+                  status: d.status || 'pago',
+                  created_at: d.created_at,
+                }]);
+              }
+            } catch (syncErr) {
+              // ignore background sync errors
+            }
+          }
+        }
       }
     } catch (e) {
       console.warn('Supabase donations fetch error, using local file DB:', e);
@@ -224,7 +255,7 @@ app.post('/api/donations', async (req, res) => {
 
   if (supabase && isSupabaseConfigured) {
     try {
-      const { data, error } = await supabase
+      let insertRes = await supabase
         .from('doacoes')
         .insert([{
           valor: donationPayload.valor,
@@ -237,14 +268,31 @@ app.post('/api/donations', async (req, res) => {
         }])
         .select()
         .single();
-      if (!error && data) {
-        // replace temporary item with official Supabase inserted item
-        db.donations = db.donations.map((d) => (d.id === donationPayload.id ? data : d));
+
+      // Fallback if optional columns nome_real or telefone don't exist in Supabase schema
+      if (insertRes.error && insertRes.error.code === 'PGRST204') {
+        insertRes = await supabase
+          .from('doacoes')
+          .insert([{
+            valor: donationPayload.valor,
+            doador: donationPayload.doador,
+            descricao: donationPayload.descricao,
+            status: donationPayload.status,
+            created_at: donationPayload.created_at,
+          }])
+          .select()
+          .single();
+      }
+
+      if (!insertRes.error && insertRes.data) {
+        db.donations = db.donations.map((d) => (d.id === donationPayload.id ? { ...donationPayload, ...insertRes.data } : d));
         saveServerDB(db);
-        return res.json(data);
+        return res.json({ ...donationPayload, ...insertRes.data });
+      } else if (insertRes.error) {
+        console.warn('Supabase donation insert warning:', insertRes.error);
       }
     } catch (e) {
-      console.warn('Supabase donation insert error:', e);
+      console.warn('Supabase donation insert exception:', e);
     }
   }
 
@@ -269,7 +317,11 @@ app.put('/api/donations/:id', async (req, res) => {
 
   if (supabase && isSupabaseConfigured) {
     try {
-      await supabase.from('doacoes').update({ ...req.body, updated_at: updatedDonation.updated_at }).eq('id', id);
+      let updateRes = await supabase.from('doacoes').update({ ...req.body, updated_at: updatedDonation.updated_at }).eq('id', id);
+      if (updateRes.error && updateRes.error.code === 'PGRST204') {
+        const { nome_real, telefone, ...coreBody } = req.body;
+        await supabase.from('doacoes').update({ ...coreBody, updated_at: updatedDonation.updated_at }).eq('id', id);
+      }
     } catch (e) {
       console.warn('Supabase donation update error:', e);
     }

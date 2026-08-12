@@ -1,0 +1,45 @@
+{
+  "config": {
+    "id": "default",
+    "nome_campanha": "Campanha Luz e Esperança",
+    "nome_igreja": "SÃO PAULO APÓSTOLO",
+    "meta_total": 59000,
+    "quantidade_paineis": 48,
+    "potencia_painel": 610,
+    "economia_mensal_total": 4178,
+    "valor_kwh": 1.16,
+    "imagem_igreja": "default-vector",
+    "admin_emails": [
+      "www.ceolin@gmail.com",
+      "jair.rodrigon@gmail.com"
+    ],
+    "painel_grid_cols": 10,
+    "painel_grid_rows": 4,
+    "painel_roof_top_percent": 26,
+    "painel_roof_left_percent": 16,
+    "painel_roof_width_percent": 68,
+    "painel_roof_height_percent": 46,
+    "painel_roof_perspective_tilt": 10,
+    "updated_at": "2026-08-12T18:05:30.258+00:00"
+  },
+  "donations": [
+    {
+      "id": "0171d13d-a065-4cd1-9258-bd10b1bc89bb",
+      "valor": 2500,
+      "doador": "Mercado São José",
+      "descricao": "",
+      "status": "pago",
+      "created_at": "2026-08-12T18:07:04.564+00:00",
+      "updated_at": "2026-08-12T18:07:04.890342+00:00"
+    },
+    {
+      "id": "0e2399d6-d9b2-4543-8bd9-4abc812a5198",
+      "valor": 1250,
+      "doador": "Família Oliveira",
+      "descricao": "",
+      "status": "pago",
+      "created_at": "2026-08-12T18:06:57.069+00:00",
+      "updated_at": "2026-08-12T18:06:57.433228+00:00"
+    }
+  ]
+}

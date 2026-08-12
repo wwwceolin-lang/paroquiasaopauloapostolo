@@ -56,7 +56,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen lg:h-screen lg:max-h-screen w-full bg-slate-950 text-white p-2.5 sm:p-4 flex flex-col justify-between overflow-y-auto lg:overflow-hidden select-none selection:bg-amber-500 selection:text-slate-950 box-border pb-6 lg:pb-3">
+    <div className="relative min-h-screen lg:h-screen lg:max-h-screen w-full bg-slate-950 text-white p-2.5 sm:p-4 flex flex-col justify-between overflow-y-auto lg:overflow-hidden select-none selection:bg-amber-500 selection:text-slate-950 box-border pb-12 sm:pb-16 lg:pb-3">
       
       {/* Background Decorative Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -250,7 +250,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({
       </div>
 
       {/* Footer Instructions */}
-      <footer className="relative z-10 w-full text-center text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider flex-shrink-0 pt-4 pb-2">
+      <footer className="relative z-10 w-full text-center text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider flex-shrink-0 pt-6 pb-4 lg:pt-4 lg:pb-2">
         Plataforma Leilão Solar • Telão Oficial em Tempo Real • {config.nome_igreja}
       </footer>
 

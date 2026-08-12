@@ -7,8 +7,10 @@ export function calculateCampaignStats(
   const metaTotal = Math.max(1, Number(config.meta_total) || 100000);
   const totalPaineis = Math.max(1, Number(config.quantidade_paineis) || 40);
   
-  // Sum of all donations
-  const jaArrecadado = donations.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+  // Sum of paid donations (exclude 'aberto' status)
+  const jaArrecadado = donations
+    .filter((d) => d.status !== 'aberto')
+    .reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
   
   const faltaArrecadar = Math.max(0, metaTotal - jaArrecadado);
   const progressoPercentual = Math.min(100, (jaArrecadado / metaTotal) * 100);
