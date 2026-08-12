@@ -24,14 +24,19 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
   // Form states
   const [valor, setValor] = useState('');
   const [doador, setDoador] = useState('');
+  const [nomeReal, setNomeReal] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState<'pago' | 'aberto'>('pago');
 
   // Filtered donations
   const filteredDonations = donations.filter((d) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      d.doador.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (d.descricao && d.descricao.toLowerCase().includes(searchTerm.toLowerCase()));
+      d.doador.toLowerCase().includes(term) ||
+      (d.nome_real && d.nome_real.toLowerCase().includes(term)) ||
+      (d.telefone && d.telefone.toLowerCase().includes(term)) ||
+      (d.descricao && d.descricao.toLowerCase().includes(term));
 
     if (!matchesSearch) return false;
 
@@ -46,6 +51,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setEditingDonation(donation);
     setValor(String(donation.valor));
     setDoador(donation.doador);
+    setNomeReal(donation.nome_real || '');
+    setTelefone(donation.telefone || '');
     setDescricao(donation.descricao || '');
     setStatus(donation.status || 'pago');
   };
@@ -54,6 +61,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setIsAddingNew(true);
     setValor('');
     setDoador('');
+    setNomeReal('');
+    setTelefone('');
     setDescricao('');
     setStatus('pago');
   };
@@ -63,6 +72,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     setIsAddingNew(false);
     setValor('');
     setDoador('');
+    setNomeReal('');
+    setTelefone('');
     setDescricao('');
     setStatus('pago');
   };
@@ -71,7 +82,7 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
     e.preventDefault();
     const numVal = Number(valor);
     if (!numVal || numVal <= 0 || !doador.trim()) {
-      alert('Por favor, preencha o valor e o nome do doador corretamente.');
+      alert('Por favor, preencha o valor e o nome de exibição do doador corretamente.');
       return;
     }
 
@@ -79,6 +90,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
       await onUpdateDonation(editingDonation.id, {
         valor: numVal,
         doador: doador.trim(),
+        nome_real: nomeReal.trim(),
+        telefone: telefone.trim(),
         descricao: descricao.trim(),
         status: status,
       });
@@ -86,6 +99,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
       await onAddDonation({
         valor: numVal,
         doador: doador.trim(),
+        nome_real: nomeReal.trim(),
+        telefone: telefone.trim(),
         descricao: descricao.trim(),
         status: status,
       });
@@ -202,7 +217,16 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
                   return (
                     <tr key={d.id} className="hover:bg-slate-850 transition-colors">
                       <td className="p-4 text-slate-400 font-mono">{formatDateBR(d.created_at)}</td>
-                      <td className="p-4 font-bold text-white text-sm">{d.doador}</td>
+                      <td className="p-4 font-bold text-white text-sm">
+                        <div>{d.doador}</div>
+                        {(d.nome_real || d.telefone) && (
+                          <div className="text-[11px] font-normal text-amber-300/90 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span>🔒</span>
+                            {d.nome_real && <span>Real: <strong>{d.nome_real}</strong></span>}
+                            {d.telefone && <span>• 📱 {d.telefone}</span>}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4 text-slate-300">{d.descricao || '-'}</td>
                       <td className="p-4">
                         <button
@@ -304,15 +328,54 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                  Doador ou Empresa *
+                  Nome para Exibição no Telão (Público) *
                 </label>
                 <input
                   type="text"
                   value={doador}
                   onChange={(e) => setDoador(e.target.value)}
+                  placeholder="Ex: Anônimo, Família Silva, Mercado São José..."
                   required
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500"
                 />
+              </div>
+
+              {/* Private Fields Box */}
+              <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                    🔒 Dados de Identificação Interna (Privado)
+                  </span>
+                  <span className="text-[10px] text-slate-400">Não vai para o Telão</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
+                      Nome Real do Doador
+                    </label>
+                    <input
+                      type="text"
+                      value={nomeReal}
+                      onChange={(e) => setNomeReal(e.target.value)}
+                      placeholder="Ex: João da Silva Sauro"
+                      className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
+                      Telefone de Contato
+                    </label>
+                    <input
+                      type="tel"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      placeholder="Ex: (11) 98765-4321"
+                      className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>

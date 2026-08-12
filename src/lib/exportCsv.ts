@@ -11,7 +11,7 @@ export function exportDonationsToCSV(donations: Donation[], filename = 'doacoes_
   const BOM = '\uFEFF';
   
   // Headers in Portuguese for Brazilian Excel (Semicolon separated)
-  const headers = ['ID', 'Data e Hora', 'Doador / Empresa', 'Valor (R$)', 'Status', 'Descrição / Lote'];
+  const headers = ['ID', 'Data e Hora', 'Doador (Telão)', 'Nome Real (Privado)', 'Telefone (Privado)', 'Valor (R$)', 'Status', 'Descrição / Lote'];
 
   const rows = donations.map((d) => {
     const statusLabel = d.status === 'aberto' ? 'Em Aberto' : 'Pago';
@@ -20,12 +20,16 @@ export function exportDonationsToCSV(donations: Donation[], filename = 'doacoes_
     
     // Escape fields containing semicolons or line breaks
     const cleanDoador = `"${(d.doador || '').replace(/"/g, '""')}"`;
+    const cleanNomeReal = `"${(d.nome_real || '').replace(/"/g, '""')}"`;
+    const cleanTelefone = `"${(d.telefone || '').replace(/"/g, '""')}"`;
     const cleanDescricao = `"${(d.descricao || '').replace(/"/g, '""')}"`;
 
     return [
       d.id,
       `"${formattedDate}"`,
       cleanDoador,
+      cleanNomeReal,
+      cleanTelefone,
       `"${formattedValor}"`,
       statusLabel,
       cleanDescricao,

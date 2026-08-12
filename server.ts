@@ -211,6 +211,8 @@ app.post('/api/donations', async (req, res) => {
     id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     valor: Number(req.body.valor) || 0,
     doador: (req.body.doador || 'Doador Anônimo').trim(),
+    nome_real: (req.body.nome_real || '').trim(),
+    telefone: (req.body.telefone || '').trim(),
     descricao: (req.body.descricao || '').trim(),
     status: req.body.status || 'pago',
     created_at: req.body.created_at || new Date().toISOString(),
@@ -227,6 +229,8 @@ app.post('/api/donations', async (req, res) => {
         .insert([{
           valor: donationPayload.valor,
           doador: donationPayload.doador,
+          nome_real: donationPayload.nome_real,
+          telefone: donationPayload.telefone,
           descricao: donationPayload.descricao,
           status: donationPayload.status,
           created_at: donationPayload.created_at,

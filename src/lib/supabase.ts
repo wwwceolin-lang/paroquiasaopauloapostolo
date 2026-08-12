@@ -125,6 +125,8 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
   const payload = {
     valor: Number(donation.valor),
     doador: donation.doador.trim(),
+    nome_real: donation.nome_real?.trim() || '',
+    telefone: donation.telefone?.trim() || '',
     descricao: donation.descricao?.trim() || '',
     status: donation.status || 'pago',
   };
@@ -501,11 +503,16 @@ CREATE TABLE public.doacoes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   valor NUMERIC(12, 2) NOT NULL CHECK (valor > 0),
   doador TEXT NOT NULL,
+  nome_real TEXT DEFAULT '',
+  telefone TEXT DEFAULT '',
   descricao TEXT DEFAULT '',
   status TEXT DEFAULT 'pago',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.doacoes ADD COLUMN IF NOT EXISTS nome_real TEXT DEFAULT '';
+ALTER TABLE public.doacoes ADD COLUMN IF NOT EXISTS telefone TEXT DEFAULT '';
 
 -- 3. Cria a tabela de configurações da campanha solar
 CREATE TABLE IF NOT EXISTS public.configuracoes (

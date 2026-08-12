@@ -12,6 +12,7 @@ import {
 } from './lib/supabase';
 import { calculateCampaignStats } from './lib/calcStats';
 import { Navbar } from './components/Navbar';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
 import { TelaoView } from './views/TelaoView';
 import { AdminLoginView } from './views/AdminLoginView';
@@ -226,6 +227,8 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col ${isTelao ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
+      <PwaInstallPrompt />
+
       {!isTelao && (
         <Navbar
           currentPath={currentPath}

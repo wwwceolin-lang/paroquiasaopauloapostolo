@@ -1,0 +1,30 @@
+{
+  "short_name": "Campanha Solar",
+  "name": "Campanha Solar - Painéis Fotovoltaicos",
+  "icons": [
+    {
+      "src": "/pwa-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.jpg",
+      "type": "image/jpeg",
+      "sizes": "1024x1024"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "description": "Acompanhamento em tempo real da doação de painéis solares e telão interativo da igreja."
+}

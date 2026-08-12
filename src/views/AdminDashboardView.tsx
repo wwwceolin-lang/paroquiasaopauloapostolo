@@ -23,6 +23,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 }) => {
   const [valor, setValor] = useState('');
   const [doador, setDoador] = useState('');
+  const [nomeReal, setNomeReal] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState<'pago' | 'aberto'>('pago');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +46,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       return;
     }
     if (!doador.trim()) {
-      alert('Por favor, informe o nome do doador ou empresa.');
+      alert('Por favor, informe o nome de exibição no telão.');
       return;
     }
 
@@ -53,14 +55,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       await onAddDonation({
         valor: numericValue,
         doador: doador.trim(),
+        nome_real: nomeReal.trim(),
+        telefone: telefone.trim(),
         descricao: descricao.trim(),
         status: status,
       });
 
       const statusText = status === 'pago' ? 'Pago' : 'Em Aberto';
-      setSuccessMessage(`✅ Doação de ${formatCurrency(numericValue)} (${statusText}) de "${doador}" enviada ao Telão com sucesso!`);
+      setSuccessMessage(`✅ Doação de ${formatCurrency(numericValue)} (${statusText}) enviada ao Telão com sucesso!`);
       setValor('');
       setDoador('');
+      setNomeReal('');
+      setTelefone('');
       setDescricao('');
       setStatus('pago');
 
@@ -265,17 +271,60 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-2">
-                Nome do Doador ou Empresa *
+              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+                Nome para Exibição no Telão (Público) *
               </label>
               <input
                 type="text"
                 value={doador}
                 onChange={(e) => setDoador(e.target.value)}
-                placeholder="Ex: Mercado São José / Família Silva"
+                placeholder="Ex: Anônimo, Família Silva, Mercado São José..."
                 required
                 className="w-full bg-slate-950 border border-slate-800 text-white font-medium rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
               />
+              <p className="text-[11px] text-slate-400 mt-1">
+                📢 Nome que aparecerá publicamente no Telão e nas transmissões.
+              </p>
+            </div>
+
+            {/* Private donor fields */}
+            <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  🔒 Cadastro Interno de Identificação (Não aparece no Telão)
+                </span>
+                <span className="bg-slate-800 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">
+                  Apenas Administração
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
+                    Nome Real do Doador (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={nomeReal}
+                    onChange={(e) => setNomeReal(e.target.value)}
+                    placeholder="Ex: João da Silva Sauro"
+                    className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
+                    Telefone de Contato (Opcional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="Ex: (11) 98765-4321"
+                    className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -346,6 +395,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </span>
                         )}
                       </div>
+                      {(d.nome_real || d.telefone) && (
+                        <div className="text-[11px] font-medium text-amber-300/90 flex items-center gap-1.5 flex-wrap">
+                          <span>🔒</span>
+                          {d.nome_real && <span>Real: <strong>{d.nome_real}</strong></span>}
+                          {d.telefone && <span>• 📱 {d.telefone}</span>}
+                        </div>
+                      )}
                       {d.descricao && <div className="text-xs text-slate-400 truncate">{d.descricao}</div>}
                       <div className="text-[10px] text-slate-500">{formatDateBR(d.created_at)}</div>
                     </div>

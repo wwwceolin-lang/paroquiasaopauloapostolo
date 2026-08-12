@@ -2,6 +2,8 @@ export interface Donation {
   id: string;
   valor: number;
   doador: string;
+  nome_real?: string;
+  telefone?: string;
   descricao?: string;
   status?: 'pago' | 'aberto';
   created_at: string;
