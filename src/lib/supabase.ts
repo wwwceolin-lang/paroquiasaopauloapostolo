@@ -518,6 +518,7 @@ CREATE TABLE IF NOT EXISTS public.configuracoes (
   economia_mensal_total NUMERIC(12, 2) NOT NULL DEFAULT 2500.00,
   valor_kwh NUMERIC(8, 2) NOT NULL DEFAULT 0.95,
   imagem_igreja TEXT DEFAULT 'default-vector',
+  admin_emails TEXT[] DEFAULT ARRAY['www.ceolin@gmail.com'],
   painel_grid_cols INT DEFAULT 10,
   painel_grid_rows INT DEFAULT 4,
   painel_roof_top_percent NUMERIC(5, 2) DEFAULT 28.00,
@@ -527,6 +528,8 @@ CREATE TABLE IF NOT EXISTS public.configuracoes (
   painel_roof_perspective_tilt NUMERIC(5, 2) DEFAULT 8.00,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.configuracoes ADD COLUMN IF NOT EXISTS admin_emails TEXT[] DEFAULT ARRAY['www.ceolin@gmail.com'];
 
 -- 4. Inserir configuração padrão inicial (caso não exista)
 INSERT INTO public.configuracoes (id, nome_campanha, nome_igreja, meta_total, quantidade_paineis)

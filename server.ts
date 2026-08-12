@@ -142,39 +142,16 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-app.get('/api/config', async (req, res) => {
-  if (supabase && isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase.from('configuracoes').select('*').limit(1).maybeSingle();
-      if (!error && data) {
-        const sbTime = data.updated_at ? new Date(data.updated_at).getTime() : 0;
-        const localTime = db.config?.updated_at ? new Date(db.config.updated_at).getTime() : 0;
-
-        // ONLY replace db.config if Supabase data has a strictly NEWER updated_at timestamp!
-        if (sbTime > localTime) {
-          db.config = { ...DEFAULT_CONFIG, ...data };
-          saveServerDB(db);
-        } else if (localTime > sbTime && data.id) {
-          // If server memory is newer, sync server memory back to Supabase
-          (async () => {
-            try {
-              await supabase.from('configuracoes').upsert([{ id: data.id, ...db.config }], { onConflict: 'id' });
-            } catch (e) {}
-          })();
-        }
-      }
-    } catch (e) {
-      console.warn('Supabase config fetch error, using local file DB:', e);
-    }
-  }
+app.get('/api/config', (req, res) => {
   res.json(db.config);
 });
 
 app.post('/api/config', async (req, res) => {
+  const updatedTime = new Date().toISOString();
   const newConfig = {
     ...db.config,
     ...req.body,
-    updated_at: new Date().toISOString(),
+    updated_at: updatedTime,
   };
   db.config = newConfig;
   saveServerDB(db);
@@ -183,7 +160,29 @@ app.post('/api/config', async (req, res) => {
     try {
       const { data: existingRow } = await supabase.from('configuracoes').select('id').limit(1).maybeSingle();
       const targetId = existingRow?.id || 'default';
-      await supabase.from('configuracoes').upsert([{ id: targetId, ...newConfig }], { onConflict: 'id' });
+
+      // Clean payload for Supabase configuracoes table
+      const supabasePayload = {
+        id: targetId,
+        nome_campanha: newConfig.nome_campanha,
+        nome_igreja: newConfig.nome_igreja,
+        meta_total: newConfig.meta_total,
+        quantidade_paineis: newConfig.quantidade_paineis,
+        potencia_painel: newConfig.potencia_painel,
+        economia_mensal_total: newConfig.economia_mensal_total,
+        valor_kwh: newConfig.valor_kwh,
+        imagem_igreja: newConfig.imagem_igreja,
+        painel_grid_cols: newConfig.painel_grid_cols ?? 10,
+        painel_grid_rows: newConfig.painel_grid_rows ?? 4,
+        painel_roof_top_percent: newConfig.painel_roof_top_percent ?? 28,
+        painel_roof_left_percent: newConfig.painel_roof_left_percent ?? 23,
+        painel_roof_width_percent: newConfig.painel_roof_width_percent ?? 54,
+        painel_roof_height_percent: newConfig.painel_roof_height_percent ?? 22,
+        painel_roof_perspective_tilt: newConfig.painel_roof_perspective_tilt ?? 8,
+        updated_at: updatedTime,
+      };
+
+      await supabase.from('configuracoes').upsert([supabasePayload], { onConflict: 'id' });
     } catch (e) {
       console.warn('Supabase config update warning:', e);
     }
