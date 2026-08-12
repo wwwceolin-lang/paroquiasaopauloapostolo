@@ -494,9 +494,24 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ config, on
                 <input
                   type="range"
                   min="20"
-                  max="90"
+                  max="95"
                   value={formData.painel_roof_width_percent ?? 54}
                   onChange={(e) => handleChange('painel_roof_width_percent', Number(e.target.value))}
+                  className="w-full accent-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="flex justify-between text-slate-300 mb-1">
+                  <span>Altura do Telhado / Grade:</span>
+                  <span className="font-mono text-amber-400">{formData.painel_roof_height_percent ?? 22}%</span>
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="90"
+                  value={formData.painel_roof_height_percent ?? 22}
+                  onChange={(e) => handleChange('painel_roof_height_percent', Number(e.target.value))}
                   className="w-full accent-amber-500"
                 />
               </div>

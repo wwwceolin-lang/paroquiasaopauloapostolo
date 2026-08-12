@@ -205,6 +205,7 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
               className="w-full h-full grid gap-1 p-1.5 bg-slate-950/60 backdrop-blur-[2px] rounded-lg border border-amber-500/30 shadow-2xl overflow-hidden"
               style={{
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridAutoRows: '1fr',
               }}
             >
               <AnimatePresence>
@@ -223,7 +224,7 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
                       damping: 20,
                       delay: panel.isNew ? (panel.index % 10) * 0.08 : 0,
                     }}
-                    className={`relative w-full aspect-[4/3] rounded-[2px] overflow-hidden transition-all duration-300 ${
+                    className={`relative w-full h-full min-h-[12px] rounded-[2px] overflow-hidden transition-all duration-300 ${
                       panel.isUnlocked
                         ? 'bg-gradient-to-br from-blue-700 via-sky-800 to-indigo-950 border border-cyan-300/80 shadow-[0_0_8px_rgba(56,189,248,0.5)]'
                         : 'border border-dashed border-amber-400/30 bg-slate-900/40 hover:border-amber-400/50'
@@ -254,12 +255,20 @@ export const ChurchRoofStage: React.FC<ChurchRoofStageProps> = ({
 
                         {/* Metallic Frame Accent */}
                         <div className="w-full h-[1px] bg-cyan-300/60" />
+
+                        {/* Panel Number Indicator */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <span className="text-[8px] sm:text-[10px] text-cyan-100 font-mono font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                            #{panel.index + 1}
+                          </span>
+                        </div>
+
                         <div className="w-full h-[1px] bg-sky-200/40" />
                       </div>
                     ) : (
                       /* Placeholder Dashed Outline */
-                      <div className="w-full h-full flex items-center justify-center opacity-30">
-                        <span className="text-[7px] text-amber-200 font-mono">
+                      <div className="w-full h-full flex items-center justify-center opacity-70">
+                        <span className="text-[8px] sm:text-[11px] text-amber-200 font-mono font-bold">
                           #{panel.index + 1}
                         </span>
                       </div>
