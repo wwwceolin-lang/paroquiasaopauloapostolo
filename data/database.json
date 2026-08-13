@@ -1,5 +1,5 @@
 {
-  "lastDonationsUpdate": "2026-08-13T14:07:26.401Z",
+  "lastDonationsUpdate": "2026-08-13T14:33:33.540Z",
   "deletedIds": [
     "7f72db50-66ae-4be7-a828-84ca69d3ef3e",
     "5d97450c-f7ec-4e1f-b0fb-5db70b537d5e",
@@ -35,37 +35,26 @@
   },
   "donations": [
     {
-      "id": "69a39735-b149-4c28-9956-a72723c8bd6c",
-      "valor": 1250,
-      "doador": "Carlos Eduardo",
-      "nome_real": "Carlos Eduardo Ceolin",
-      "telefone": "(11) 97777-6666",
-      "descricao": "Lance de Teste Sincronizacao Privada",
-      "status": "aberto",
-      "created_at": "2026-08-13T14:07:26.401+00:00",
-      "updated_at": "2026-08-13T14:07:26.542494+00:00"
-    },
-    {
-      "id": "2264a522-b069-4712-9bf9-8f8f14f8fe54",
-      "valor": 500,
-      "doador": "Antonio",
-      "nome_real": "",
-      "telefone": "",
+      "id": "a923c355-8b43-4b7e-9cbf-a04367f11b51",
+      "valor": 200,
+      "doador": "Pedro",
+      "nome_real": "Pedro Henrique",
+      "telefone": "11254258488",
       "descricao": "",
       "status": "aberto",
-      "created_at": "2026-08-13T13:01:23.047+00:00",
-      "updated_at": "2026-08-13T13:22:14.961901+00:00"
+      "created_at": "2026-08-13T14:29:54.326+00:00",
+      "updated_at": "2026-08-13T14:29:52.73648+00:00"
     },
     {
-      "id": "d56189b9-7101-4fb9-85e6-7562cf96ca04",
-      "valor": 350,
-      "doador": "José Almeida",
-      "nome_real": "",
-      "telefone": "",
-      "descricao": "ir receber no mercado",
+      "id": "914d9623-c7cd-4689-9f76-86587a07f73e",
+      "valor": 575,
+      "doador": "Jair Rodrigues",
+      "nome_real": "Nome Editado Com Sucesso",
+      "telefone": "(11) 91111-2222",
+      "descricao": "Testando edição de doação",
       "status": "aberto",
-      "created_at": "2026-08-13T13:00:27.48+00:00",
-      "updated_at": "2026-08-13T13:22:14.961901+00:00"
+      "created_at": "2026-08-13T14:28:35.546+00:00",
+      "updated_at": "2026-08-13T14:33:33.54+00:00"
     }
   ]
 }

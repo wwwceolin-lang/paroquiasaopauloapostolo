@@ -369,18 +369,27 @@ app.post('/api/donations', async (req, res) => {
 
 app.put('/api/donations/:id', async (req, res) => {
   const { id } = req.params;
-  const index = db.donations.findIndex((d) => d.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Doação não encontrada' });
-  }
+  let index = db.donations.findIndex((d) => d.id === id);
+  const existingItem = index >= 0 ? db.donations[index] : { id };
 
   const updatedDonation = {
-    ...db.donations[index],
-    ...req.body,
+    ...existingItem,
+    id,
+    valor: req.body.valor !== undefined ? Number(req.body.valor) : (existingItem as any).valor || 0,
+    doador: req.body.doador !== undefined ? String(req.body.doador).trim() : (existingItem as any).doador || '',
+    nome_real: req.body.nome_real !== undefined ? String(req.body.nome_real).trim() : (existingItem as any).nome_real || '',
+    telefone: req.body.telefone !== undefined ? String(req.body.telefone).trim() : (existingItem as any).telefone || '',
+    descricao: req.body.descricao !== undefined ? String(req.body.descricao).trim() : (existingItem as any).descricao || '',
+    status: req.body.status || (existingItem as any).status || 'aberto',
+    created_at: (existingItem as any).created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 
-  db.donations[index] = updatedDonation;
+  if (index >= 0) {
+    db.donations[index] = updatedDonation;
+  } else {
+    db.donations.unshift(updatedDonation);
+  }
   db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
@@ -397,7 +406,9 @@ app.put('/api/donations/:id', async (req, res) => {
           status: updatedDonation.status,
           updated_at: updatedDonation.updated_at,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .maybeSingle();
 
       if (updateRes.error) {
         updateRes = await supabase
@@ -411,11 +422,13 @@ app.put('/api/donations/:id', async (req, res) => {
             status: updatedDonation.status,
             updated_at: updatedDonation.updated_at,
           })
-          .eq('id', id);
+          .eq('id', id)
+          .select()
+          .maybeSingle();
       }
 
       if (updateRes.error) {
-        await supabase
+        updateRes = await supabase
           .from('doacoes')
           .update({
             valor: updatedDonation.valor,
@@ -424,7 +437,24 @@ app.put('/api/donations/:id', async (req, res) => {
             status: updatedDonation.status,
             updated_at: updatedDonation.updated_at,
           })
-          .eq('id', id);
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+      }
+
+      if (!updateRes.error && updateRes.data) {
+        const synced = {
+          ...updatedDonation,
+          ...normalizeSupabaseDonation(updateRes.data),
+          nome_real: updatedDonation.nome_real || updateRes.data['Nome Real (Privado)'] || updateRes.data.nome_real || '',
+          telefone: updatedDonation.telefone || updateRes.data['Telefone (Privado)'] || updateRes.data.telefone || '',
+        };
+        const idx = db.donations.findIndex((d) => d.id === id);
+        if (idx >= 0) {
+          db.donations[idx] = synced;
+          saveServerDB(db);
+        }
+        return res.json(synced);
       }
     } catch (e) {
       console.warn('Supabase donation update error:', e);

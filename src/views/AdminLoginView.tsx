@@ -32,15 +32,15 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
 
     setLoading(true);
 
+    const saveAdminSession = (emailToSave: string) => {
+      sessionStorage.setItem('admin_email', emailToSave);
+      sessionStorage.setItem('admin_authed', 'true');
+      localStorage.setItem('admin_email', emailToSave);
+      localStorage.setItem('admin_authed', 'true');
+    };
+
     try {
       const isEmailAuthorized = validEmailsList.includes(trimmedEmail) || trimmedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase();
-
-      const saveAdminSession = (emailToSave: string) => {
-        sessionStorage.setItem('admin_email', emailToSave);
-        sessionStorage.setItem('admin_authed', 'true');
-        localStorage.setItem('admin_email', emailToSave);
-        localStorage.setItem('admin_authed', 'true');
-      };
 
       // Check emergency password fallback first for instant admin access
       if (isEmailAuthorized && (password === 'admin123' || password === 'admin' || password === '123456')) {

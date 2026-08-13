@@ -266,22 +266,48 @@ export async function updateDonation(id: string, updates: Partial<Omit<Donation,
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      const { nome_real, telefone, ...restUpdates } = updates;
+      const payload: any = {
+        ...restUpdates,
+        updated_at: new Date().toISOString(),
+      };
+      if (nome_real !== undefined) payload['Nome Real (Privado)'] = nome_real;
+      if (telefone !== undefined) payload['Telefone (Privado)'] = telefone;
+
+      let { data, error } = await supabase
         .from('doacoes')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        let fallbackRes = await supabase
+          .from('doacoes')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+
+        if (fallbackRes.error) {
+          const { nome_real: _nr, telefone: _tf, ...coreUpdates } = updates;
+          fallbackRes = await supabase
+            .from('doacoes')
+            .update({ ...coreUpdates, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .maybeSingle();
+        }
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (!error && data) {
-        const updated = data as Donation;
+        const updated = normalizeSupabaseDonation(data);
         const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
         if (stored) {
           const items: Donation[] = JSON.parse(stored);
-          const newItems = items.map((d) => (d.id === id ? updated : d));
+          const newItems = items.map((d) => (d.id === id ? { ...d, ...updated } : d));
           localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(newItems));
         }
         notifyLocalUpdate('donation', updated);
