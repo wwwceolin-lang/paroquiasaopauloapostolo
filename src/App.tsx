@@ -26,7 +26,8 @@ export default function App() {
     typeof window !== 'undefined' ? window.location.pathname || '/' : '/'
   );
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return typeof window !== 'undefined' ? sessionStorage.getItem('admin_authed') === 'true' : false;
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('admin_authed') === 'true' || localStorage.getItem('admin_authed') === 'true';
   });
 
   const [config, setConfig] = useState<CampaignConfig>(DEFAULT_CAMPAIGN_CONFIG);
@@ -114,6 +115,8 @@ export default function App() {
     setIsAdminAuthenticated(true);
     sessionStorage.setItem('admin_authed', 'true');
     sessionStorage.setItem('admin_email', emailLoggedIn);
+    localStorage.setItem('admin_authed', 'true');
+    localStorage.setItem('admin_email', emailLoggedIn);
     navigate('/admin');
   };
 
@@ -121,6 +124,8 @@ export default function App() {
     setIsAdminAuthenticated(false);
     sessionStorage.removeItem('admin_authed');
     sessionStorage.removeItem('admin_email');
+    localStorage.removeItem('admin_authed');
+    localStorage.removeItem('admin_email');
     await signOutSupabase();
     navigate('/admin');
   };

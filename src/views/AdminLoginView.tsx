@@ -35,9 +35,16 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
     try {
       const isEmailAuthorized = validEmailsList.includes(trimmedEmail) || trimmedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase();
 
+      const saveAdminSession = (emailToSave: string) => {
+        sessionStorage.setItem('admin_email', emailToSave);
+        sessionStorage.setItem('admin_authed', 'true');
+        localStorage.setItem('admin_email', emailToSave);
+        localStorage.setItem('admin_authed', 'true');
+      };
+
       // Check emergency password fallback first for instant admin access
       if (isEmailAuthorized && (password === 'admin123' || password === 'admin' || password === '123456')) {
-        sessionStorage.setItem('admin_email', trimmedEmail);
+        saveAdminSession(trimmedEmail);
         onLoginSuccess(trimmedEmail);
         return;
       }
@@ -48,7 +55,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
           if (signUpError) {
             // Check if emergency fallback applies
             if (isEmailAuthorized) {
-              sessionStorage.setItem('admin_email', trimmedEmail);
+              saveAdminSession(trimmedEmail);
               onLoginSuccess(trimmedEmail);
               return;
             }
@@ -57,11 +64,11 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
             setInfo('Conta criada com sucesso no Supabase! Efetuando login...');
             const { error: signInErr } = await signInWithSupabase(trimmedEmail, password);
             if (!signInErr) {
-              sessionStorage.setItem('admin_email', trimmedEmail);
+              saveAdminSession(trimmedEmail);
               onLoginSuccess(trimmedEmail);
               return;
             } else if (isEmailAuthorized) {
-              sessionStorage.setItem('admin_email', trimmedEmail);
+              saveAdminSession(trimmedEmail);
               onLoginSuccess(trimmedEmail);
               return;
             }
@@ -70,12 +77,12 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
           // Attempt Supabase Auth Sign In
           const { error: signInError } = await signInWithSupabase(trimmedEmail, password);
           if (!signInError) {
-            sessionStorage.setItem('admin_email', trimmedEmail);
+            saveAdminSession(trimmedEmail);
             onLoginSuccess(trimmedEmail);
             return;
           } else {
             if (isEmailAuthorized) {
-              sessionStorage.setItem('admin_email', trimmedEmail);
+              saveAdminSession(trimmedEmail);
               onLoginSuccess(trimmedEmail);
               return;
             }
@@ -85,7 +92,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
       } else {
         // Local Mode Authentication
         if (password === 'admin123' || password === 'admin' || password === '123456') {
-          sessionStorage.setItem('admin_email', trimmedEmail);
+          saveAdminSession(trimmedEmail);
           onLoginSuccess(trimmedEmail);
         } else {
           setError('Senha incorreta para o modo local. Use "admin123".');
@@ -94,7 +101,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
     } catch (err) {
       console.error(err);
       if (validEmailsList.includes(trimmedEmail)) {
-        sessionStorage.setItem('admin_email', trimmedEmail);
+        saveAdminSession(trimmedEmail);
         onLoginSuccess(trimmedEmail);
         return;
       }
