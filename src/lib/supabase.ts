@@ -121,6 +121,17 @@ export async function fetchDonations(): Promise<Donation[]> {
   return INITIAL_DEMO_DONATIONS;
 }
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at'>): Promise<Donation> {
   const payload = {
     valor: Number(donation.valor),
@@ -151,16 +162,34 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
     console.warn('API insert donation exception:', err);
   }
 
+  const generatedId = generateUUID();
+  const fullPayload = {
+    id: generatedId,
+    ...payload,
+    created_at: new Date().toISOString(),
+  };
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('doacoes')
-        .insert([{ ...payload, created_at: new Date().toISOString() }])
+        .insert([fullPayload])
         .select()
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        const { nome_real, telefone, ...corePayload } = fullPayload;
+        const fallbackRes = await supabase
+          .from('doacoes')
+          .insert([corePayload])
+          .select()
+          .maybeSingle();
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (!error && data) {
-        const created = data as Donation;
+        const created = { ...fullPayload, ...data } as Donation;
         const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
         const items: Donation[] = stored ? JSON.parse(stored) : [];
         const updated = [created, ...items.filter((d) => d.id !== created.id)];
@@ -173,18 +202,12 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
     }
   }
 
-  const newDonation: Donation = {
-    id: `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    ...payload,
-    created_at: new Date().toISOString(),
-  };
-
   const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
   const items: Donation[] = stored ? JSON.parse(stored) : [];
-  const updated = [newDonation, ...items.filter((d) => d.id !== newDonation.id)];
+  const updated = [fullPayload, ...items.filter((d) => d.id !== fullPayload.id)];
   localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(updated));
-  notifyLocalUpdate('donation', newDonation);
-  return newDonation;
+  notifyLocalUpdate('donation', fullPayload);
+  return fullPayload;
 }
 
 export async function updateDonation(id: string, updates: Partial<Omit<Donation, 'id'>>): Promise<Donation | null> {

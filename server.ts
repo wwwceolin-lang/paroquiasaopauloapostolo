@@ -235,9 +235,25 @@ app.get('/api/donations', async (req, res) => {
   res.json(cleanDonations);
 });
 
+function isUUID(str: string): boolean {
+  return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 app.post('/api/donations', async (req, res) => {
+  const donationId = isUUID(req.body.id) ? req.body.id : generateUUID();
   const donationPayload = {
-    id: req.body.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`),
+    id: donationId,
     valor: Number(req.body.valor) || 0,
     doador: (req.body.doador || 'Doador Anônimo').trim(),
     nome_real: (req.body.nome_real || '').trim(),
@@ -253,7 +269,12 @@ app.post('/api/donations', async (req, res) => {
     db.deletedIds = db.deletedIds.filter((id) => id !== donationPayload.id);
   }
 
-  db.donations.unshift(donationPayload);
+  const existingIdx = db.donations.findIndex((d) => d.id === donationPayload.id);
+  if (existingIdx >= 0) {
+    db.donations[existingIdx] = donationPayload;
+  } else {
+    db.donations.unshift(donationPayload);
+  }
   db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
@@ -272,10 +293,11 @@ app.post('/api/donations', async (req, res) => {
           created_at: donationPayload.created_at,
         }])
         .select()
-        .single();
+        .maybeSingle();
 
       // Fallback if optional columns nome_real or telefone don't exist in Supabase schema
-      if (insertRes.error && insertRes.error.code === 'PGRST204') {
+      if (insertRes.error) {
+        console.warn('Supabase insert with optional columns failed, retrying with core columns:', insertRes.error.message);
         insertRes = await supabase
           .from('doacoes')
           .insert([{
@@ -287,13 +309,14 @@ app.post('/api/donations', async (req, res) => {
             created_at: donationPayload.created_at,
           }])
           .select()
-          .single();
+          .maybeSingle();
       }
 
       if (!insertRes.error && insertRes.data) {
-        db.donations = db.donations.map((d) => (d.id === donationPayload.id ? { ...donationPayload, ...insertRes.data } : d));
+        const synced = { ...donationPayload, ...insertRes.data };
+        db.donations = db.donations.map((d) => (d.id === donationPayload.id ? synced : d));
         saveServerDB(db);
-        return res.json({ ...donationPayload, ...insertRes.data });
+        return res.json(synced);
       } else if (insertRes.error) {
         console.warn('Supabase donation insert warning:', insertRes.error);
       }
@@ -324,10 +347,31 @@ app.put('/api/donations/:id', async (req, res) => {
 
   if (supabase && isSupabaseConfigured) {
     try {
-      let updateRes = await supabase.from('doacoes').update({ ...req.body, updated_at: updatedDonation.updated_at }).eq('id', id);
-      if (updateRes.error && updateRes.error.code === 'PGRST204') {
-        const { nome_real, telefone, ...coreBody } = req.body;
-        await supabase.from('doacoes').update({ ...coreBody, updated_at: updatedDonation.updated_at }).eq('id', id);
+      let updateRes = await supabase
+        .from('doacoes')
+        .update({
+          valor: updatedDonation.valor,
+          doador: updatedDonation.doador,
+          nome_real: updatedDonation.nome_real,
+          telefone: updatedDonation.telefone,
+          descricao: updatedDonation.descricao,
+          status: updatedDonation.status,
+          updated_at: updatedDonation.updated_at,
+        })
+        .eq('id', id);
+
+      if (updateRes.error) {
+        console.warn('Supabase update with optional cols failed, retrying with core cols:', updateRes.error.message);
+        await supabase
+          .from('doacoes')
+          .update({
+            valor: updatedDonation.valor,
+            doador: updatedDonation.doador,
+            descricao: updatedDonation.descricao,
+            status: updatedDonation.status,
+            updated_at: updatedDonation.updated_at,
+          })
+          .eq('id', id);
       }
     } catch (e) {
       console.warn('Supabase donation update error:', e);
@@ -386,19 +430,46 @@ app.post('/api/donations/clear', async (req, res) => {
 // ================= VITE / STATIC MIDDLEWARE =================
 
 async function startServer() {
+  // Redirect non-GET/HEAD methods on frontend pages back to GET before static/Vite middleware
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && req.method !== 'GET' && req.method !== 'HEAD') {
+      return res.redirect(303, req.originalUrl || req.path || '/');
+    }
+    next();
+  });
+
+  let viteServer: any = null;
   if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
+    viteServer = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    app.use(vite.middlewares);
+    app.use(viteServer.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
   }
+
+  // SPA Catch-All Fallback Handler for ALL non-API requests
+  app.use(async (req, res, next) => {
+    if (req.path.startsWith('/api') || req.originalUrl.startsWith('/api')) {
+      return res.status(404).json({ error: 'Endpoint não encontrado' });
+    }
+
+    if (process.env.NODE_ENV !== 'production' && viteServer) {
+      try {
+        const url = req.originalUrl || req.url || '/';
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await viteServer.transformIndexHtml(url, template);
+        return res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        return next(e);
+      }
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      return res.sendFile(path.join(distPath, 'index.html'));
+    }
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando e sincronizando dados na porta ${PORT}`);
