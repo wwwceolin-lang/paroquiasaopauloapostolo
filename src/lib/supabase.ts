@@ -79,6 +79,20 @@ if (broadcastChannel) {
 
 // ================= DONATIONS API =================
 
+export function normalizeSupabaseDonation(item: any): Donation {
+  return {
+    id: item.id,
+    valor: Number(item.valor) || 0,
+    doador: item.doador || '',
+    nome_real: item['Nome Real (Privado)'] || item.nome_real || item.nomeReal || '',
+    telefone: item['Telefone (Privado)'] || item.telefone || '',
+    descricao: item.descricao || '',
+    status: item.status || 'aberto',
+    created_at: item.created_at || new Date().toISOString(),
+    updated_at: item.updated_at || item.created_at || new Date().toISOString(),
+  };
+}
+
 export async function fetchDonations(): Promise<Donation[]> {
   try {
     const res = await fetch(`/api/donations?_t=${Date.now()}`, { cache: 'no-store' });
@@ -101,8 +115,9 @@ export async function fetchDonations(): Promise<Donation[]> {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(data));
-        return data as Donation[];
+        const normalized = data.map(normalizeSupabaseDonation);
+        localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(normalized));
+        return normalized;
       }
     } catch (err) {
       console.warn('Supabase fetch exception:', err);
@@ -173,23 +188,39 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
     try {
       let { data, error } = await supabase
         .from('doacoes')
-        .insert([fullPayload])
+        .insert([{
+          id: fullPayload.id,
+          valor: fullPayload.valor,
+          doador: fullPayload.doador,
+          'Nome Real (Privado)': fullPayload.nome_real,
+          'Telefone (Privado)': fullPayload.telefone,
+          descricao: fullPayload.descricao,
+          status: fullPayload.status,
+          created_at: fullPayload.created_at,
+        }])
         .select()
         .maybeSingle();
 
       if (error) {
-        const { nome_real, telefone, ...corePayload } = fullPayload;
-        const fallbackRes = await supabase
+        let fallbackRes = await supabase
           .from('doacoes')
-          .insert([corePayload])
+          .insert([fullPayload])
           .select()
           .maybeSingle();
+        if (fallbackRes.error) {
+          const { nome_real, telefone, ...corePayload } = fullPayload;
+          fallbackRes = await supabase
+            .from('doacoes')
+            .insert([corePayload])
+            .select()
+            .maybeSingle();
+        }
         data = fallbackRes.data;
         error = fallbackRes.error;
       }
 
       if (!error && data) {
-        const created = { ...fullPayload, ...data } as Donation;
+        const created = { ...fullPayload, ...normalizeSupabaseDonation(data) };
         const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
         const items: Donation[] = stored ? JSON.parse(stored) : [];
         const updated = [created, ...items.filter((d) => d.id !== created.id)];

@@ -217,14 +217,29 @@ app.post('/api/config', async (req, res) => {
   res.json(db.config);
 });
 
+function normalizeSupabaseDonation(item: any) {
+  return {
+    id: item.id,
+    valor: Number(item.valor) || 0,
+    doador: item.doador || '',
+    nome_real: item['Nome Real (Privado)'] || item.nome_real || item.nomeReal || '',
+    telefone: item['Telefone (Privado)'] || item.telefone || '',
+    descricao: item.descricao || '',
+    status: item.status || 'aberto',
+    created_at: item.created_at || new Date().toISOString(),
+    updated_at: item.updated_at || item.created_at || new Date().toISOString(),
+  };
+}
+
 app.get('/api/donations', async (req, res) => {
   if (supabase && isSupabaseConfigured) {
     try {
       const { data, error } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
       if (!error && Array.isArray(data)) {
-        db.donations = data;
+        const normalizedList = data.map(normalizeSupabaseDonation);
+        db.donations = normalizedList;
         saveServerDB(db);
-        return res.json(data);
+        return res.json(normalizedList);
       }
     } catch (e) {
       console.warn('Supabase donations fetch error, using local file DB:', e);
@@ -280,14 +295,15 @@ app.post('/api/donations', async (req, res) => {
 
   if (supabase && isSupabaseConfigured) {
     try {
+      // Primary attempt: with custom column names 'Nome Real (Privado)' and 'Telefone (Privado)'
       let insertRes = await supabase
         .from('doacoes')
         .insert([{
           id: donationPayload.id,
           valor: donationPayload.valor,
           doador: donationPayload.doador,
-          nome_real: donationPayload.nome_real,
-          telefone: donationPayload.telefone,
+          'Nome Real (Privado)': donationPayload.nome_real,
+          'Telefone (Privado)': donationPayload.telefone,
           descricao: donationPayload.descricao,
           status: donationPayload.status,
           created_at: donationPayload.created_at,
@@ -295,9 +311,26 @@ app.post('/api/donations', async (req, res) => {
         .select()
         .maybeSingle();
 
-      // Fallback if optional columns nome_real or telefone don't exist in Supabase schema
+      // Fallback 1: with standard column names nome_real and telefone
       if (insertRes.error) {
-        console.warn('Supabase insert with optional columns failed, retrying with core columns:', insertRes.error.message);
+        insertRes = await supabase
+          .from('doacoes')
+          .insert([{
+            id: donationPayload.id,
+            valor: donationPayload.valor,
+            doador: donationPayload.doador,
+            nome_real: donationPayload.nome_real,
+            telefone: donationPayload.telefone,
+            descricao: donationPayload.descricao,
+            status: donationPayload.status,
+            created_at: donationPayload.created_at,
+          }])
+          .select()
+          .maybeSingle();
+      }
+
+      // Fallback 2: core columns
+      if (insertRes.error) {
         insertRes = await supabase
           .from('doacoes')
           .insert([{
@@ -313,7 +346,13 @@ app.post('/api/donations', async (req, res) => {
       }
 
       if (!insertRes.error && insertRes.data) {
-        const synced = { ...donationPayload, ...insertRes.data };
+        const rawData = insertRes.data;
+        const synced = {
+          ...donationPayload,
+          ...normalizeSupabaseDonation(rawData),
+          nome_real: donationPayload.nome_real || rawData['Nome Real (Privado)'] || rawData.nome_real || '',
+          telefone: donationPayload.telefone || rawData['Telefone (Privado)'] || rawData.telefone || '',
+        };
         db.donations = db.donations.map((d) => (d.id === donationPayload.id ? synced : d));
         saveServerDB(db);
         return res.json(synced);
@@ -352,8 +391,8 @@ app.put('/api/donations/:id', async (req, res) => {
         .update({
           valor: updatedDonation.valor,
           doador: updatedDonation.doador,
-          nome_real: updatedDonation.nome_real,
-          telefone: updatedDonation.telefone,
+          'Nome Real (Privado)': updatedDonation.nome_real,
+          'Telefone (Privado)': updatedDonation.telefone,
           descricao: updatedDonation.descricao,
           status: updatedDonation.status,
           updated_at: updatedDonation.updated_at,
@@ -361,7 +400,21 @@ app.put('/api/donations/:id', async (req, res) => {
         .eq('id', id);
 
       if (updateRes.error) {
-        console.warn('Supabase update with optional cols failed, retrying with core cols:', updateRes.error.message);
+        updateRes = await supabase
+          .from('doacoes')
+          .update({
+            valor: updatedDonation.valor,
+            doador: updatedDonation.doador,
+            nome_real: updatedDonation.nome_real,
+            telefone: updatedDonation.telefone,
+            descricao: updatedDonation.descricao,
+            status: updatedDonation.status,
+            updated_at: updatedDonation.updated_at,
+          })
+          .eq('id', id);
+      }
+
+      if (updateRes.error) {
         await supabase
           .from('doacoes')
           .update({
