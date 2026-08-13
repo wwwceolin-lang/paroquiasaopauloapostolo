@@ -61,6 +61,8 @@ const DEFAULT_CONFIG = {
 };
 
 interface ServerDB {
+  lastDonationsUpdate?: string;
+  deletedIds?: string[];
   config: typeof DEFAULT_CONFIG;
   donations: Array<{
     id: string;
@@ -84,6 +86,8 @@ function loadServerDB(): ServerDB {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       return {
+        lastDonationsUpdate: parsed.lastDonationsUpdate || new Date().toISOString(),
+        deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [],
         config: parsed.config ? { ...DEFAULT_CONFIG, ...parsed.config } : DEFAULT_CONFIG,
         donations: Array.isArray(parsed.donations) ? parsed.donations : [],
       };
@@ -91,7 +95,7 @@ function loadServerDB(): ServerDB {
   } catch (err) {
     console.error('Error reading database file:', err);
   }
-  const initial = { config: DEFAULT_CONFIG, donations: [] };
+  const initial = { lastDonationsUpdate: new Date().toISOString(), deletedIds: [], config: DEFAULT_CONFIG, donations: [] };
   saveServerDB(initial);
   return initial;
 }
@@ -138,8 +142,9 @@ syncFromSupabase();
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
-    isSupabaseConfigured,
+    isSupabaseConfigured: Boolean(supabase && isSupabaseConfigured),
     donationsCount: db.donations.length,
+    donationsUpdatedAt: db.lastDonationsUpdate || db.config.updated_at,
     updated_at: db.config.updated_at,
   });
 });
@@ -194,52 +199,25 @@ app.post('/api/config', async (req, res) => {
 });
 
 app.get('/api/donations', async (req, res) => {
+  const deletedSet = new Set(db.deletedIds || []);
   if (supabase && isSupabaseConfigured) {
     try {
       const { data, error } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
       if (!error && Array.isArray(data)) {
-        if (data.length > 0) {
-          db.donations = data;
-          saveServerDB(db);
-        } else if (db.donations.length > 0) {
-          // Local DB has donations but Supabase returned empty array.
-          // Sync local items to Supabase in background without wiping local DB.
-          for (const d of db.donations) {
-            try {
-              let syncRes = await supabase.from('doacoes').insert([{
-                valor: d.valor,
-                doador: d.doador,
-                nome_real: d.nome_real || '',
-                telefone: d.telefone || '',
-                descricao: d.descricao || '',
-                status: d.status || 'pago',
-                created_at: d.created_at,
-              }]);
-              if (syncRes.error && syncRes.error.code === 'PGRST204') {
-                await supabase.from('doacoes').insert([{
-                  valor: d.valor,
-                  doador: d.doador,
-                  descricao: d.descricao || '',
-                  status: d.status || 'pago',
-                  created_at: d.created_at,
-                }]);
-              }
-            } catch (syncErr) {
-              // ignore background sync errors
-            }
-          }
-        }
+        db.donations = data.filter((d: any) => !deletedSet.has(d.id));
+        saveServerDB(db);
       }
     } catch (e) {
       console.warn('Supabase donations fetch error, using local file DB:', e);
     }
   }
-  res.json(db.donations);
+  const cleanDonations = db.donations.filter((d) => !deletedSet.has(d.id));
+  res.json(cleanDonations);
 });
 
 app.post('/api/donations', async (req, res) => {
   const donationPayload = {
-    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id: req.body.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`),
     valor: Number(req.body.valor) || 0,
     doador: (req.body.doador || 'Doador Anônimo').trim(),
     nome_real: (req.body.nome_real || '').trim(),
@@ -250,7 +228,13 @@ app.post('/api/donations', async (req, res) => {
     updated_at: new Date().toISOString(),
   };
 
+  // Ensure ID is not in deletedIds if re-created
+  if (db.deletedIds) {
+    db.deletedIds = db.deletedIds.filter((id) => id !== donationPayload.id);
+  }
+
   db.donations.unshift(donationPayload);
+  db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
   if (supabase && isSupabaseConfigured) {
@@ -258,6 +242,7 @@ app.post('/api/donations', async (req, res) => {
       let insertRes = await supabase
         .from('doacoes')
         .insert([{
+          id: donationPayload.id,
           valor: donationPayload.valor,
           doador: donationPayload.doador,
           nome_real: donationPayload.nome_real,
@@ -274,6 +259,7 @@ app.post('/api/donations', async (req, res) => {
         insertRes = await supabase
           .from('doacoes')
           .insert([{
+            id: donationPayload.id,
             valor: donationPayload.valor,
             doador: donationPayload.doador,
             descricao: donationPayload.descricao,
@@ -313,6 +299,7 @@ app.put('/api/donations/:id', async (req, res) => {
   };
 
   db.donations[index] = updatedDonation;
+  db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
   if (supabase && isSupabaseConfigured) {
@@ -332,12 +319,20 @@ app.put('/api/donations/:id', async (req, res) => {
 
 app.delete('/api/donations/:id', async (req, res) => {
   const { id } = req.params;
+  if (!db.deletedIds) db.deletedIds = [];
+  if (!db.deletedIds.includes(id)) {
+    db.deletedIds.push(id);
+  }
   db.donations = db.donations.filter((d) => d.id !== id);
+  db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
   if (supabase && isSupabaseConfigured) {
     try {
-      await supabase.from('doacoes').delete().eq('id', id);
+      const { error } = await supabase.from('doacoes').delete().eq('id', id);
+      if (error) {
+        console.warn('Supabase delete warning:', error);
+      }
     } catch (e) {
       console.warn('Supabase donation delete error:', e);
     }
@@ -347,7 +342,14 @@ app.delete('/api/donations/:id', async (req, res) => {
 });
 
 app.post('/api/donations/clear', async (req, res) => {
+  if (!db.deletedIds) db.deletedIds = [];
+  db.donations.forEach((d) => {
+    if (!db.deletedIds!.includes(d.id)) {
+      db.deletedIds!.push(d.id);
+    }
+  });
   db.donations = [];
+  db.lastDonationsUpdate = new Date().toISOString();
   saveServerDB(db);
 
   if (supabase && isSupabaseConfigured) {

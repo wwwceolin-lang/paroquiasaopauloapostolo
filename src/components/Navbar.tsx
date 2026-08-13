@@ -107,22 +107,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action Tools */}
           <div className="flex items-center gap-2">
-            {/* Supabase Status Pill */}
-            <button
-              onClick={onOpenSupabaseModal}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-                isSupabaseConfigured
-                  ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 hover:bg-emerald-900/60'
-                  : 'bg-amber-950/60 text-amber-300 border-amber-500/40 hover:bg-amber-900/60'
-              }`}
-              title="Clique para ver instruções e script SQL"
-            >
-              <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="hidden sm:inline">
-                {isSupabaseConfigured ? 'Supabase Realtime' : 'Modo Demo / Local'}
-              </span>
-            </button>
-
             {/* Logout Button */}
             {isAdminAuthenticated && onLogout && (
               <button

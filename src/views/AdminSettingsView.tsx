@@ -56,23 +56,23 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ config, on
   };
 
   const handleClearDemoDonations = () => {
-    if (window.confirm('Tem certeza de que deseja remover todas as doações de teste para iniciar o leilão do zero?')) {
-      clearLocalDemoDonations();
-      setClearedNotice(true);
-      setTimeout(() => setClearedNotice(false), 4000);
-    }
+    clearLocalDemoDonations();
+    setClearedNotice(true);
+    setTimeout(() => setClearedNotice(false), 4000);
   };
 
   const handleAddAdminEmail = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = newAdminEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      alert('Por favor, digite um e-mail válido.');
+      setAdminNotice('Por favor, digite um e-mail válido.');
+      setTimeout(() => setAdminNotice(''), 4000);
       return;
     }
 
     if (adminEmailsList.includes(cleanEmail)) {
-      alert('Este e-mail já está cadastrado como administrador.');
+      setAdminNotice('Este e-mail já está cadastrado como administrador.');
+      setTimeout(() => setAdminNotice(''), 4000);
       return;
     }
 
@@ -85,16 +85,15 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ config, on
 
   const handleRemoveAdminEmail = (emailToRemove: string) => {
     if (emailToRemove.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase()) {
-      alert('O e-mail do administrador principal não pode ser removido.');
+      setAdminNotice('O e-mail do administrador principal não pode ser removido.');
+      setTimeout(() => setAdminNotice(''), 4000);
       return;
     }
 
-    if (confirm(`Remover o administrador "${emailToRemove}"?`)) {
-      const updatedList = adminEmailsList.filter((e) => e.toLowerCase() !== emailToRemove.toLowerCase());
-      handleChange('admin_emails', updatedList);
-      setAdminNotice(`E-mail "${emailToRemove}" removido! Salve as alterações para confirmar.`);
-      setTimeout(() => setAdminNotice(''), 4000);
-    }
+    const updatedList = adminEmailsList.filter((e) => e.toLowerCase() !== emailToRemove.toLowerCase());
+    handleChange('admin_emails', updatedList);
+    setAdminNotice(`E-mail "${emailToRemove}" removido! Salve as alterações para confirmar.`);
+    setTimeout(() => setAdminNotice(''), 4000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,109 +199,6 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ config, on
             );
           })}
         </div>
-      </div>
-
-      {/* SECTION 2: AUTHENTICATION & SUPABASE DATABASE SETUP */}
-      <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div className="space-y-1">
-            <h2 className="text-lg font-extrabold text-amber-400 flex items-center gap-2">
-              <span>🔐</span>
-              <span>Conexão Supabase & Script SQL</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Sincronização em tempo real das doações com o banco de dados Supabase.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleCopySql}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all flex items-center gap-1.5"
-            >
-              <span>📋</span>
-              <span>{copiedSql ? 'SQL Copiado!' : 'Copiar Script SQL do Supabase'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowSqlCode(!showSqlCode)}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 transition-colors"
-            >
-              {showSqlCode ? 'Ocultar Código SQL' : 'Ver Script SQL'}
-            </button>
-          </div>
-        </div>
-
-        {/* Admin Info Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Administrador Principal</div>
-            <div className="text-sm font-black text-amber-300 font-mono flex items-center gap-2">
-              <span>👤</span>
-              <span>{DEFAULT_ADMIN_EMAIL}</span>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              Garante acesso permanente para alteração de metas e configurações do leilão.
-            </p>
-          </div>
-
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Status do Banco Supabase</div>
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <span className={`w-2.5 h-2.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className={isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-300'}>
-                {isSupabaseConfigured ? 'Conectado ao Supabase (Realtime Ativo)' : 'Modo Demo / Armazenamento Local'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              Cole o Script SQL no SQL Editor do Supabase para transmissão ao vivo no Telão.
-            </p>
-          </div>
-        </div>
-
-        {/* Clean Test Donations Button */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-          <div>
-            <div className="text-xs font-bold text-white">Iniciar Leilão Oficial (Zerar Doações)</div>
-            <p className="text-[11px] text-slate-400">
-              Remove doações de teste locais para que a transmissão comece totalmente limpa.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearDemoDonations}
-            className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
-          >
-            🗑️ Limpar Doações de Teste
-          </button>
-        </div>
-
-        {clearedNotice && (
-          <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-3 rounded-xl text-xs font-bold animate-pulse">
-            ✓ Doações zeradas com sucesso! O leilão está limpo para começar.
-          </div>
-        )}
-
-        {/* SQL Schema Box */}
-        {showSqlCode && (
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center justify-between text-xs text-amber-300 font-bold">
-              <span>Script SQL para o SQL Editor do Supabase:</span>
-              <button onClick={handleCopySql} className="text-xs underline text-amber-400">
-                {copiedSql ? 'Copiado!' : 'Copiar para Área de Transferência'}
-              </button>
-            </div>
-            <textarea
-              readOnly
-              value={SUPABASE_SQL_SCHEMA}
-              rows={12}
-              className="w-full bg-slate-950 text-slate-300 p-4 rounded-2xl border border-slate-800 font-mono text-xs focus:outline-none"
-            />
-          </div>
-        )}
-
       </div>
 
       {/* SECTION 3: CAMPAIGN PARAMETERS FORM */}

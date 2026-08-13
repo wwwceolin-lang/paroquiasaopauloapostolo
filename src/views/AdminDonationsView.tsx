@@ -20,6 +20,8 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'todos' | 'pago' | 'aberto'>('todos');
   const [editingDonation, setEditingDonation] = useState<Donation | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deletingDonation, setDeletingDonation] = useState<Donation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form states
   const [valor, setValor] = useState('');
@@ -112,16 +114,6 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
   const handleToggleStatus = async (donation: Donation) => {
     const newStatus = donation.status === 'aberto' ? 'pago' : 'aberto';
     await onUpdateDonation(donation.id, { status: newStatus });
-  };
-
-  const handleDelete = async (id: string, doadorName: string, amount: number) => {
-    if (
-      confirm(
-        `Confirma a exclusão da doação de ${formatCurrency(amount)} de "${doadorName}"?\nEsta ação recalculará automaticamente o valor total no Telão.`
-      )
-    ) {
-      await onDeleteDonation(id);
-    }
   };
 
   return (
@@ -251,8 +243,9 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
                           Editar
                         </button>
                         <button
-                          onClick={() => handleDelete(d.id, d.doador, d.valor)}
-                          className="bg-rose-950/60 hover:bg-rose-900 text-rose-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-500/30 transition-colors"
+                          type="button"
+                          onClick={() => setDeletingDonation(d)}
+                          className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-500/40 transition-colors"
                         >
                           Excluir
                         </button>
@@ -406,6 +399,68 @@ export const AdminDonationsView: React.FC<AdminDonationsViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deletingDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 text-white space-y-5 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="font-bold text-lg text-white">Confirmar Exclusão</h3>
+            </div>
+            
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-sm">
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">Doador:</span>
+                <strong className="text-white">{deletingDonation.doador}</strong>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">Valor:</span>
+                <strong className="text-amber-300 font-mono">{formatCurrency(deletingDonation.valor)}</strong>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Esta ação removerá a doação permanentemente e os valores do Telão serão recalculados.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingDonation(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true);
+                    await onDeleteDonation(deletingDonation.id);
+                  } catch (err) {
+                    console.error('Delete error:', err);
+                  } finally {
+                    setIsDeleting(false);
+                    setDeletingDonation(null);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-lg flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <span>Excluindo...</span>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Sim, Excluir</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

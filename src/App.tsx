@@ -145,12 +145,14 @@ export default function App() {
   };
 
   const handleUpdateDonation = async (id: string, updates: Partial<Omit<Donation, 'id'>>) => {
+    setDonations((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
     await updateDonation(id, updates);
     const updated = await fetchDonations();
     setDonations(updated);
   };
 
   const handleDeleteDonation = async (id: string) => {
+    setDonations((prev) => prev.filter((d) => d.id !== id));
     await deleteDonation(id);
     const updated = await fetchDonations();
     setDonations(updated);

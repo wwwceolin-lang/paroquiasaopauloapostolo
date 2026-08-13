@@ -1,4 +1,8 @@
 {
+  "lastDonationsUpdate": "2026-08-13T12:47:47.135Z",
+  "deletedIds": [
+    "7f72db50-66ae-4be7-a828-84ca69d3ef3e"
+  ],
   "config": {
     "id": "default",
     "nome_campanha": "Campanha Luz e Esperança",
@@ -24,22 +28,22 @@
   },
   "donations": [
     {
-      "id": "0171d13d-a065-4cd1-9258-bd10b1bc89bb",
-      "valor": 2500,
-      "doador": "Mercado São José",
+      "id": "5d97450c-f7ec-4e1f-b0fb-5db70b537d5e",
+      "valor": 750,
+      "doador": "ze",
       "descricao": "",
-      "status": "pago",
-      "created_at": "2026-08-12T18:07:04.564+00:00",
-      "updated_at": "2026-08-12T18:07:04.890342+00:00"
+      "status": "aberto",
+      "created_at": "2026-08-13T12:43:33.905+00:00",
+      "updated_at": "2026-08-13T12:44:08.385+00:00"
     },
     {
-      "id": "0e2399d6-d9b2-4543-8bd9-4abc812a5198",
-      "valor": 1250,
-      "doador": "Família Oliveira",
+      "id": "539e0cfc-248a-4b03-a153-55311bf273e0",
+      "valor": 1500,
+      "doador": "Jose",
       "descricao": "",
-      "status": "pago",
-      "created_at": "2026-08-12T18:06:57.069+00:00",
-      "updated_at": "2026-08-12T18:06:57.433228+00:00"
+      "status": "aberto",
+      "created_at": "2026-08-13T12:11:51.684+00:00",
+      "updated_at": "2026-08-13T12:11:52.188889+00:00"
     }
   ]
 }

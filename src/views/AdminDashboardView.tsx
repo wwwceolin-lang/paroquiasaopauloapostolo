@@ -29,7 +29,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [status, setStatus] = useState<'pago' | 'aberto'>('aberto');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [deletingDonation, setDeletingDonation] = useState<Donation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const stats = calculateCampaignStats(config, donations);
 
@@ -40,13 +42,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     const numericValue = Number(valor.replace(/\./g, '').replace(',', '.'));
     if (!numericValue || numericValue <= 0) {
-      alert('Por favor, informe um valor de doação válido.');
+      setErrorMessage('Por favor, informe um valor de doação válido.');
       return;
     }
     if (!doador.trim()) {
-      alert('Por favor, informe o nome de exibição no telão.');
+      setErrorMessage('Por favor, informe o nome de exibição no telão.');
       return;
     }
 
@@ -72,18 +75,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
-      alert('Erro ao registrar doação. Verifique a conexão.');
+      setErrorMessage('Erro ao registrar doação. Verifique a conexão.');
       console.error(err);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteConfirm = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta doação? O valor do telão será recalculado automaticamente.')) {
-      setDeletingId(id);
-      await onDeleteDonation(id);
-      setDeletingId(null);
     }
   };
 
@@ -178,6 +173,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {successMessage && (
             <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-4 rounded-xl text-sm font-bold animate-pulse">
               {successMessage}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="bg-rose-500/20 border border-rose-500/40 text-rose-300 p-4 rounded-xl text-sm font-bold">
+              ⚠️ {errorMessage}
             </div>
           )}
 
@@ -409,9 +410,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     <div className="text-right">
                       <div className="font-black text-amber-300 text-base">{formatCurrency(d.valor)}</div>
                       <button
-                        onClick={() => handleDeleteConfirm(d.id)}
-                        disabled={deletingId === d.id}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        type="button"
+                        onClick={() => setDeletingDonation(d)}
+                        className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 px-2.5 py-1 rounded text-xs font-bold border border-rose-500/40 transition-colors mt-1"
                       >
                         Excluir
                       </button>
@@ -424,6 +425,69 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deletingDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 text-white space-y-5 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="font-bold text-lg text-white">Confirmar Exclusão</h3>
+            </div>
+            
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-sm">
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">Doador:</span>
+                <strong className="text-white">{deletingDonation.doador}</strong>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">Valor:</span>
+                <strong className="text-amber-300 font-mono">{formatCurrency(deletingDonation.valor)}</strong>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Esta ação removerá a doação permanentemente e os valores do Telão serão recalculados.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingDonation(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true);
+                    await onDeleteDonation(deletingDonation.id);
+                  } catch (err) {
+                    console.error('Delete error:', err);
+                  } finally {
+                    setIsDeleting(false);
+                    setDeletingDonation(null);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-lg flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <span>Excluindo...</span>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Sim, Excluir</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

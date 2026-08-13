@@ -205,9 +205,6 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess, 
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-800 text-center text-[11px] text-slate-500">
-          Senha de emergência local para o leilão: <code className="text-amber-400 font-mono">admin123</code>
-        </div>
       </div>
     </div>
   );

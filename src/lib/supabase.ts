@@ -128,7 +128,7 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
     nome_real: donation.nome_real?.trim() || '',
     telefone: donation.telefone?.trim() || '',
     descricao: donation.descricao?.trim() || '',
-    status: donation.status || 'pago',
+    status: donation.status || 'aberto',
   };
 
   try {
@@ -138,9 +138,13 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
       body: JSON.stringify(payload),
     });
     if (res.ok) {
-      const created = await res.json();
+      const created: Donation = await res.json();
+      const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+      const items: Donation[] = stored ? JSON.parse(stored) : [];
+      const updated = [created, ...items.filter((d) => d.id !== created.id)];
+      localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(updated));
       notifyLocalUpdate('donation', created);
-      return created as Donation;
+      return created;
     }
   } catch (err) {
     console.warn('API insert donation exception:', err);
@@ -155,8 +159,13 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
         .single();
 
       if (!error && data) {
-        notifyLocalUpdate('donation', data);
-        return data as Donation;
+        const created = data as Donation;
+        const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+        const items: Donation[] = stored ? JSON.parse(stored) : [];
+        const updated = [created, ...items.filter((d) => d.id !== created.id)];
+        localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(updated));
+        notifyLocalUpdate('donation', created);
+        return created;
       }
     } catch (err) {
       console.error('Supabase insert exception:', err);
@@ -169,8 +178,9 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
     created_at: new Date().toISOString(),
   };
 
-  const existing = await fetchDonations();
-  const updated = [newDonation, ...existing];
+  const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+  const items: Donation[] = stored ? JSON.parse(stored) : [];
+  const updated = [newDonation, ...items.filter((d) => d.id !== newDonation.id)];
   localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(updated));
   notifyLocalUpdate('donation', newDonation);
   return newDonation;
@@ -184,9 +194,15 @@ export async function updateDonation(id: string, updates: Partial<Omit<Donation,
       body: JSON.stringify(updates),
     });
     if (res.ok) {
-      const updated = await res.json();
+      const updated: Donation = await res.json();
+      const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+      if (stored) {
+        const items: Donation[] = JSON.parse(stored);
+        const newItems = items.map((d) => (d.id === id ? updated : d));
+        localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(newItems));
+      }
       notifyLocalUpdate('donation', updated);
-      return updated as Donation;
+      return updated;
     }
   } catch (err) {
     console.warn('API update donation exception:', err);
@@ -205,31 +221,52 @@ export async function updateDonation(id: string, updates: Partial<Omit<Donation,
         .single();
 
       if (!error && data) {
-        notifyLocalUpdate('donation', data);
-        return data as Donation;
+        const updated = data as Donation;
+        const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+        if (stored) {
+          const items: Donation[] = JSON.parse(stored);
+          const newItems = items.map((d) => (d.id === id ? updated : d));
+          localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(newItems));
+        }
+        notifyLocalUpdate('donation', updated);
+        return updated;
       }
     } catch (err) {
       console.error('Supabase update exception:', err);
     }
   }
 
-  const existing = await fetchDonations();
-  const index = existing.findIndex((d) => d.id === id);
+  const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+  if (!stored) return null;
+  const items: Donation[] = JSON.parse(stored);
+  const index = items.findIndex((d) => d.id === id);
   if (index === -1) return null;
 
   const updatedItem: Donation = {
-    ...existing[index],
+    ...items[index],
     ...updates,
     updated_at: new Date().toISOString(),
   };
 
-  existing[index] = updatedItem;
-  localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(existing));
+  items[index] = updatedItem;
+  localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(items));
   notifyLocalUpdate('donation', updatedItem);
   return updatedItem;
 }
 
 export async function deleteDonation(id: string): Promise<boolean> {
+  // Always update local cache immediately so UI doesn't revive item from cache
+  const stored = localStorage.getItem(STORAGE_DONATIONS_KEY);
+  if (stored) {
+    try {
+      const items: Donation[] = JSON.parse(stored);
+      const filtered = items.filter((d) => d.id !== id);
+      localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(filtered));
+    } catch (e) {
+      console.warn('Error clearing item from localStorage:', e);
+    }
+  }
+
   try {
     const res = await fetch(`/api/donations/${id}`, { method: 'DELETE' });
     if (res.ok) {
@@ -242,23 +279,15 @@ export async function deleteDonation(id: string): Promise<boolean> {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase
+      await supabase
         .from('doacoes')
         .delete()
         .eq('id', id);
-
-      if (!error) {
-        notifyLocalUpdate('donation', { id, deleted: true });
-        return true;
-      }
     } catch (err) {
       console.error('Supabase delete error:', err);
     }
   }
 
-  const existing = await fetchDonations();
-  const filtered = existing.filter((d) => d.id !== id);
-  localStorage.setItem(STORAGE_DONATIONS_KEY, JSON.stringify(filtered));
   notifyLocalUpdate('donation', { id, deleted: true });
   return true;
 }
@@ -393,13 +422,14 @@ export function subscribeToRealtimeChanges(
         const statusData = await res.json();
         const currentConfigTime = statusData.updated_at || '';
         const currentDonationsCount = statusData.donationsCount;
+        const currentDonationsUpdatedAt = statusData.donationsUpdatedAt || '';
 
         if (lastServerConfigTime && currentConfigTime !== lastServerConfigTime) {
           onConfigChange();
         }
         lastServerConfigTime = currentConfigTime;
 
-        const donationsHash = `${currentDonationsCount}-${currentConfigTime}`;
+        const donationsHash = `${currentDonationsCount}-${currentDonationsUpdatedAt}`;
         if (lastServerDonationsHash && donationsHash !== lastServerDonationsHash) {
           onDonationChange();
         }
