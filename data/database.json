@@ -1,7 +1,10 @@
 {
-  "lastDonationsUpdate": "2026-08-13T12:47:47.135Z",
+  "lastDonationsUpdate": "2026-08-13T13:13:06.326Z",
   "deletedIds": [
-    "7f72db50-66ae-4be7-a828-84ca69d3ef3e"
+    "7f72db50-66ae-4be7-a828-84ca69d3ef3e",
+    "5d97450c-f7ec-4e1f-b0fb-5db70b537d5e",
+    "539e0cfc-248a-4b03-a153-55311bf273e0",
+    "5dd7ea09-f2d8-477a-afa5-2397db7bd41c"
   ],
   "config": {
     "id": "default",
@@ -28,22 +31,31 @@
   },
   "donations": [
     {
-      "id": "5d97450c-f7ec-4e1f-b0fb-5db70b537d5e",
-      "valor": 750,
-      "doador": "ze",
+      "id": "2264a522-b069-4712-9bf9-8f8f14f8fe54",
+      "valor": 500,
+      "doador": "Antonio",
       "descricao": "",
       "status": "aberto",
-      "created_at": "2026-08-13T12:43:33.905+00:00",
-      "updated_at": "2026-08-13T12:44:08.385+00:00"
+      "created_at": "2026-08-13T13:01:23.047+00:00",
+      "updated_at": "2026-08-13T13:01:24.265554+00:00"
     },
     {
-      "id": "539e0cfc-248a-4b03-a153-55311bf273e0",
+      "id": "d56189b9-7101-4fb9-85e6-7562cf96ca04",
+      "valor": 350,
+      "doador": "José Almeida",
+      "descricao": "ir receber no mercado",
+      "status": "aberto",
+      "created_at": "2026-08-13T13:00:27.48+00:00",
+      "updated_at": "2026-08-13T13:00:27.876752+00:00"
+    },
+    {
+      "id": "a05562af-2eb3-4726-a1de-cd9e6c6c329a",
       "valor": 1500,
-      "doador": "Jose",
+      "doador": "Jair Gonçalves",
       "descricao": "",
       "status": "aberto",
-      "created_at": "2026-08-13T12:11:51.684+00:00",
-      "updated_at": "2026-08-13T12:11:52.188889+00:00"
+      "created_at": "2026-08-13T12:59:30.58+00:00",
+      "updated_at": "2026-08-13T12:59:31.656696+00:00"
     }
   ]
 }

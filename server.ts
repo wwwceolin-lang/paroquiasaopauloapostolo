@@ -139,17 +139,36 @@ syncFromSupabase();
 
 // ================= API ROUTES =================
 
+// Anti-cache header middleware for all API routes to ensure real-time cross-device updates
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
     isSupabaseConfigured: Boolean(supabase && isSupabaseConfigured),
     donationsCount: db.donations.length,
-    donationsUpdatedAt: db.lastDonationsUpdate || db.config.updated_at,
-    updated_at: db.config.updated_at,
+    donationsUpdatedAt: db.lastDonationsUpdate || db.config.updated_at || new Date().toISOString(),
+    updated_at: db.config.updated_at || new Date().toISOString(),
   });
 });
 
-app.get('/api/config', (req, res) => {
+app.get('/api/config', async (req, res) => {
+  if (supabase && isSupabaseConfigured) {
+    try {
+      const { data: configData } = await supabase.from('configuracoes').select('*').limit(1).maybeSingle();
+      if (configData) {
+        db.config = { ...DEFAULT_CONFIG, ...configData };
+        saveServerDB(db);
+      }
+    } catch (e) {
+      console.warn('Supabase config fetch warning:', e);
+    }
+  }
   res.json(db.config);
 });
 
@@ -199,18 +218,19 @@ app.post('/api/config', async (req, res) => {
 });
 
 app.get('/api/donations', async (req, res) => {
-  const deletedSet = new Set(db.deletedIds || []);
   if (supabase && isSupabaseConfigured) {
     try {
       const { data, error } = await supabase.from('doacoes').select('*').order('created_at', { ascending: false });
       if (!error && Array.isArray(data)) {
-        db.donations = data.filter((d: any) => !deletedSet.has(d.id));
+        db.donations = data;
         saveServerDB(db);
+        return res.json(data);
       }
     } catch (e) {
       console.warn('Supabase donations fetch error, using local file DB:', e);
     }
   }
+  const deletedSet = new Set(db.deletedIds || []);
   const cleanDonations = db.donations.filter((d) => !deletedSet.has(d.id));
   res.json(cleanDonations);
 });

@@ -81,7 +81,7 @@ if (broadcastChannel) {
 
 export async function fetchDonations(): Promise<Donation[]> {
   try {
-    const res = await fetch('/api/donations');
+    const res = await fetch(`/api/donations?_t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -132,10 +132,11 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
   };
 
   try {
-    const res = await fetch('/api/donations', {
+    const res = await fetch(`/api/donations?_t=${Date.now()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      cache: 'no-store',
     });
     if (res.ok) {
       const created: Donation = await res.json();
@@ -188,10 +189,11 @@ export async function insertDonation(donation: Omit<Donation, 'id' | 'created_at
 
 export async function updateDonation(id: string, updates: Partial<Omit<Donation, 'id'>>): Promise<Donation | null> {
   try {
-    const res = await fetch(`/api/donations/${id}`, {
+    const res = await fetch(`/api/donations/${id}?_t=${Date.now()}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
+      cache: 'no-store',
     });
     if (res.ok) {
       const updated: Donation = await res.json();
@@ -268,7 +270,10 @@ export async function deleteDonation(id: string): Promise<boolean> {
   }
 
   try {
-    const res = await fetch(`/api/donations/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/donations/${id}?_t=${Date.now()}`, {
+      method: 'DELETE',
+      cache: 'no-store',
+    });
     if (res.ok) {
       notifyLocalUpdate('donation', { id, deleted: true });
       return true;
@@ -296,7 +301,7 @@ export async function deleteDonation(id: string): Promise<boolean> {
 
 export async function fetchCampaignConfig(): Promise<CampaignConfig> {
   try {
-    const res = await fetch('/api/config');
+    const res = await fetch(`/api/config?_t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
@@ -356,10 +361,11 @@ export async function saveCampaignConfig(config: Partial<CampaignConfig>): Promi
   localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(updatedConfig));
 
   try {
-    const res = await fetch('/api/config', {
+    const res = await fetch(`/api/config?_t=${Date.now()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedConfig),
+      cache: 'no-store',
     });
     if (res.ok) {
       const saved = await res.json();
@@ -417,7 +423,7 @@ export function subscribeToRealtimeChanges(
 
   const checkServerUpdates = async () => {
     try {
-      const res = await fetch('/api/status');
+      const res = await fetch(`/api/status?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const statusData = await res.json();
         const currentConfigTime = statusData.updated_at || '';
@@ -441,7 +447,7 @@ export function subscribeToRealtimeChanges(
   };
 
   checkServerUpdates();
-  const pollingInterval = setInterval(checkServerUpdates, 3000);
+  const pollingInterval = setInterval(checkServerUpdates, 1200);
   unsubscribers.push(() => clearInterval(pollingInterval));
 
   // 2. Supabase Realtime Channel if configured

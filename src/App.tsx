@@ -107,7 +107,7 @@ export default function App() {
     return () => {
       unsubscribe();
     };
-  }, [config]);
+  }, []);
 
   // Handle Admin Login & Logout
   const handleLoginSuccess = (emailLoggedIn: string) => {
